@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bitcoin Regtest Dashboard</title>
+<style>
+  /* ── Reset & Variables ─────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --orange:    #f7931a;
+    --orange-dk: #c4730e;
+    --orange-lt: #fdb760;
+    --bg:        #0d0d0d;
+    --bg2:       #161616;
+    --bg3:       #1e1e1e;
+    --bg4:       #252525;
+    --border:    #2e2e2e;
+    --text:      #e8e8e8;
+    --text2:     #9a9a9a;
+    --text3:     #666;
+    --green:     #22c55e;
+    --red:       #ef4444;
+    --blue:      #60a5fa;
+    --mono:      'SF Mono', 'Fira Code', 'Consolas', monospace;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ── Scrollbar ─────────────────────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg2); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #444; }
+
+  /* ── Header ────────────────────────────────────────────────────────── */
+  header {
+    background: linear-gradient(135deg, #111 0%, #1a1000 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .btc-logo {
+    width: 36px;
+    height: 36px;
+    background: var(--orange);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 900;
+    color: white;
+    flex-shrink: 0;
+    box-shadow: 0 0 16px rgba(247,147,26,0.35);
+  }
+
+  header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--orange);
+    letter-spacing: 0.3px;
+  }
+
+  .header-badge {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 11px;
+    color: var(--text2);
+    font-family: var(--mono);
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  #last-update { font-family: var(--mono); font-size: 11px; }
+
+  .pulse-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+    display: inline-block;
+  }
+  .pulse-dot.offline { background: var(--red); animation: none; }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,.4); }
+    50%      { opacity: .7; box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+  }
+
+  /* ── Layout ────────────────────────────────────────────────────────── */
+  main { padding: 20px 24px; max-width: 1600px; margin: 0 auto; }
+
+  .nodes-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 900px) { .nodes-grid { grid-template-columns: 1fr; } }
+
+  /* ── Card ──────────────────────────────────────────────────────────── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .card-header {
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-body { padding: 16px; }
+
+  /* ── Node header ───────────────────────────────────────────────────── */
+  .node-header {
+    background: linear-gradient(135deg, var(--bg3) 0%, var(--bg2) 100%);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .node-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .node-icon {
+    width: 32px; height: 32px;
+    background: rgba(247,147,26,0.12);
+    border: 1px solid rgba(247,147,26,0.25);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  .node-name { font-size: 16px; font-weight: 700; color: var(--orange); }
+  .node-port { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .status-badge.online  { background: rgba(34,197,94,.12);  color: var(--green); border: 1px solid rgba(34,197,94,.25); }
+  .status-badge.offline { background: rgba(239,68,68,.12);  color: var(--red);   border: 1px solid rgba(239,68,68,.25); }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .online  .status-dot { background: var(--green); }
+  .offline .status-dot { background: var(--red); }
+
+  /* ── Stat grid ─────────────────────────────────────────────────────── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .stat-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    text-align: center;
+  }
+
+  .stat-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .stat-value { font-size: 18px; font-weight: 700; color: var(--text); font-family: var(--mono); }
+  .stat-value.orange { color: var(--orange); }
+  .stat-value.green  { color: var(--green); }
+  .stat-value.blue   { color: var(--blue); }
+  .stat-sub  { font-size: 10px; color: var(--text3); margin-top: 2px; word-break: break-all; font-family: var(--mono); }
+
+  /* ── Mempool badge ─────────────────────────────────────────────────── */
+  .mempool-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 14px;
+  }
+  .mempool-label { font-size: 11px; color: var(--text2); }
+  .mempool-count {
+    background: rgba(247,147,26,.15);
+    color: var(--orange);
+    border: 1px solid rgba(247,147,26,.3);
+    border-radius: 12px;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: var(--mono);
+  }
+
+  /* ── Blocks table ──────────────────────────────────────────────────── */
+  .blocks-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .blocks-count {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: var(--mono);
+  }
+
+  .blocks-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .blocks-table th {
+    text-align: left;
+    padding: 6px 8px;
+    color: var(--text3);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+  }
+  .blocks-table td {
+    padding: 7px 8px;
+    border-bottom: 1px solid rgba(46,46,46,0.5);
+    vertical-align: middle;
+    cursor: pointer;
+  }
+  .blocks-table tr:last-child td { border-bottom: none; }
+  .blocks-table tbody tr:hover td { background: rgba(247,147,26,0.05); }
+
+  .block-height { font-weight: 700; color: var(--orange); font-family: var(--mono); }
+  .block-hash   { color: var(--blue); font-family: var(--mono); font-size: 11px; }
+  .block-time   { color: var(--text2); white-space: nowrap; }
+  .block-txs    { color: var(--green); font-weight: 600; text-align: center; }
+  .block-size   { color: var(--text3); font-family: var(--mono); text-align: right; }
+
+  @keyframes flashNew {
+    0%   { background: rgba(247,147,26,0.25); }
+    100% { background: transparent; }
+  }
+  .block-new td { animation: flashNew 1.5s ease-out forwards; }
+
+  /* ── Loading placeholder ───────────────────────────────────────────── */
+  .skeleton {
+    height: 28px;
+    background: linear-gradient(90deg, var(--bg3) 25%, var(--bg4) 50%, var(--bg3) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+    margin-bottom: 4px;
+  }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  .offline-overlay {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--text3);
+  }
+  .offline-icon { font-size: 32px; margin-bottom: 8px; }
+  .offline-msg  { font-size: 13px; }
+
+  /* ── Comparison panel ──────────────────────────────────────────────── */
+  .comparison-card { margin-top: 20px; }
+
+  .comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .comparison-table th {
+    padding: 10px 16px;
+    background: var(--bg3);
+    color: var(--text2);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+  .comparison-table th:not(:first-child) { text-align: center; }
+  .comparison-table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(46,46,46,0.5);
+    vertical-align: middle;
+  }
+  .comparison-table tr:last-child td { border-bottom: none; }
+  .comparison-table td:not(:first-child) { text-align: center; font-family: var(--mono); }
+  .comparison-table .row-label { color: var(--text2); font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; }
+
+  .sync-banner {
+    margin-top: 12px;
+    border-radius: 8px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .sync-banner.synced    { background: rgba(34,197,94,.1);  color: var(--green); border: 1px solid rgba(34,197,94,.2); }
+  .sync-banner.unsynced  { background: rgba(239,68,68,.1);  color: var(--red);   border: 1px solid rgba(239,68,68,.2); }
+  .sync-banner.unknown   { background: rgba(100,100,100,.1); color: var(--text3); border: 1px solid var(--border); }
+
+  /* ── Modal ─────────────────────────────────────────────────────────── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 200;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 16px;
+    overflow-y: auto;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 860px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .modal-header {
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-title { font-size: 14px; font-weight: 700; color: var(--orange); }
+  .modal-close {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    background: var(--bg4);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+  }
+  .modal-close:hover { background: var(--red); color: white; }
+
+  .modal-body { padding: 18px; }
+
+  .block-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+  .meta-item {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+  .meta-key   { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 3px; }
+  .meta-value { font-size: 12px; font-family: var(--mono); color: var(--text); word-break: break-all; }
+  .meta-value.orange { color: var(--orange); }
+
+  .tx-list-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tx-item {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 6px;
+    overflow: hidden;
+  }
+  .tx-header {
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: background .12s;
+  }
+  .tx-header:hover { background: var(--bg4); }
+  .tx-txid { font-family: var(--mono); font-size: 11px; color: var(--blue); word-break: break-all; }
+  .tx-meta { font-size: 11px; color: var(--text3); white-space: nowrap; margin-left: 8px; }
+  .tx-arrow { color: var(--text3); font-size: 10px; transition: transform .15s; flex-shrink: 0; margin-left: 8px; }
+  .tx-item.expanded .tx-arrow { transform: rotate(90deg); }
+
+  .tx-details {
+    display: none;
+    border-top: 1px solid var(--border);
+    padding: 10px 12px;
+    font-size: 11px;
+  }
+  .tx-item.expanded .tx-details { display: block; }
+
+  .io-section { margin-bottom: 8px; }
+  .io-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+  .io-row {
+    background: var(--bg4);
+    border-radius: 4px;
+    padding: 5px 8px;
+    margin-bottom: 3px;
+    font-family: var(--mono);
+    color: var(--text2);
+    word-break: break-all;
+  }
+  .io-value { color: var(--orange); font-weight: 600; }
+  .coinbase-label {
+    display: inline-block;
+    background: rgba(247,147,26,.15);
+    color: var(--orange);
+    border: 1px solid rgba(247,147,26,.3);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .modal-spinner {
+    text-align: center;
+    padding: 40px;
+    color: var(--text3);
+    font-size: 13px;
+  }
+
+  /* ── Tooltip hash ─────────────────────────────────────────────────── */
+  .hash-short { cursor: help; }
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════════════════ -->
+<header>
+  <div class="header-left">
+    <div class="btc-logo">₿</div>
+    <div>
+      <h1>Bitcoin Regtest Dashboard</h1>
+    </div>
+    <div class="header-badge">REGTEST</div>
+  </div>
+  <div class="header-right">
+    <span class="pulse-dot" id="global-dot"></span>
+    <span>Actualizado: <span id="last-update">—</span></span>
+  </div>
+</header>
+
+<!-- ═══ MAIN ══════════════════════════════════════════════════════════════ -->
+<main>
+
+  <!-- Nodes grid -->
+  <div class="nodes-grid">
+    <div id="node1-panel"></div>
+    <div id="node2-panel"></div>
+  </div>
+
+  <!-- Comparison panel -->
+  <div class="card comparison-card">
+    <div class="card-header">
+      <div class="card-title">⚖️ Comparativa de Nodos</div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th style="width:160px">Métrica</th>
+            <th>Nodo 1 (nodo1)</th>
+            <th>Nodo 2 (nodo2)</th>
+          </tr>
+        </thead>
+        <tbody id="comparison-body">
+          <tr><td colspan="3" style="text-align:center;padding:20px;color:var(--text3)">Cargando...</td></tr>
+        </tbody>
+      </table>
+      <div style="padding:12px 16px">
+        <div class="sync-banner unknown" id="sync-banner">
+          <span>⏳</span> Verificando sincronización...
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ═══ BLOCK DETAIL MODAL ════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-content">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">Bloque</span>
+      <button class="modal-close" onclick="closeModalBtn()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <div class="modal-spinner">Cargando bloque...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════════════════
+const API = 'http://localhost:18500';
+const NODES = [
+  { id: 1, name: 'nodo1', label: 'Nodo 1' },
+  { id: 2, name: 'nodo2', label: 'Nodo 2' },
+];
+
+// State
+const state = {
+  1: { info: null, blocks: [], online: null, mempoolCount: 0, sessionBlocks: 0, initialHeight: null },
+  2: { info: null, blocks: [], online: null, mempoolCount: 0, sessionBlocks: 0, initialHeight: null },
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// API helpers
+// ═══════════════════════════════════════════════════════════════════════════
+async function apiFetch(path) {
+  try {
+    const r = await fetch(API + path, { signal: AbortSignal.timeout(6000) });
+    return await r.json();
+  } catch(e) {
+    return { error: e.message };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Helpers
+// ═══════════════════════════════════════════════════════════════════════════
+function shortHash(h) {
+  if (!h || h.length < 16) return h || '—';
+  return h.slice(0, 8) + '…' + h.slice(-8);
+}
+
+function fmtTime(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts * 1000);
+  return d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
+       + ' ' + d.toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit' });
+}
+
+function fmtBytes(b) {
+  if (b === undefined || b === null) return '—';
+  if (b < 1024) return b + ' B';
+  return (b / 1024).toFixed(1) + ' KB';
+}
+
+function satsToBTC(sats) {
+  if (sats === undefined) return '—';
+  return (sats / 1e8).toFixed(8) + ' BTC';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Render node panel
+// ═══════════════════════════════════════════════════════════════════════════
+function renderNodePanel(nodeId) {
+  const s     = state[nodeId];
+  const node  = NODES[nodeId - 1];
+  const port  = nodeId === 1 ? 1234 : 2345;
+  const chain = s.info?.blockchain;
+  const net   = s.info?.network;
+  const mem   = s.info?.mempool;
+  const online = s.online;
+
+  const onlineCls  = online ? 'online'  : 'offline';
+  const onlineText = online ? 'ONLINE'  : 'OFFLINE';
+
+  // Stats
+  const height    = chain?.blocks ?? '—';
+  const peers     = net?.connections ?? '—';
+  const bestHash  = chain?.bestblockhash ?? '';
+  const diff      = chain?.difficulty !== undefined ? chain.difficulty.toFixed(4) : '—';
+  const mempoolN  = mem?.size ?? s.mempoolCount;
+
+  if (s.initialHeight === null && chain?.blocks !== undefined) {
+    state[nodeId].initialHeight = chain.blocks;
+  }
+  if (chain?.blocks !== undefined && s.initialHeight !== null) {
+    state[nodeId].sessionBlocks = chain.blocks - s.initialHeight;
+  }
+
+  let blocksHtml = '';
+  if (!online) {
+    blocksHtml = `
+      <div class="offline-overlay">
+        <div class="offline-icon">🔴</div>
+        <div class="offline-msg">Nodo offline — sin datos de bloques</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">Verificar: bitcoind en puerto ${port}</div>
+      </div>`;
+  } else if (s.blocks.length === 0) {
+    blocksHtml = [...Array(5)].map(() => `<div class="skeleton"></div>`).join('');
+  } else {
+    const rows = s.blocks.map((b, i) => `
+      <tr class="${i === 0 && b._new ? 'block-new' : ''}" onclick="openBlock(${nodeId}, '${b.hash}')">
+        <td class="block-height">#${b.height}</td>
+        <td class="block-hash" title="${b.hash}">${shortHash(b.hash)}</td>
+        <td class="block-time">${fmtTime(b.time)}</td>
+        <td class="block-txs">${b.txcount}</td>
+        <td class="block-size">${fmtBytes(b.size)}</td>
+      </tr>`).join('');
+
+    blocksHtml = `
+      <table class="blocks-table">
+        <thead>
+          <tr>
+            <th>Altura</th>
+            <th>Hash</th>
+            <th>Tiempo</th>
+            <th style="text-align:center">Txs</th>
+            <th style="text-align:right">Tamaño</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  const html = `
+    <div class="node-header">
+      <div class="node-title">
+        <div class="node-icon">⛏</div>
+        <div>
+          <div class="node-name">${node.label} · ${node.name}</div>
+          <div class="node-port">rpc :${port}</div>
+        </div>
+      </div>
+      <div class="status-badge ${onlineCls}">
+        <div class="status-dot"></div>
+        ${onlineText}
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-label">Altura</div>
+        <div class="stat-value orange">${height}</div>
+        <div class="stat-sub">bloques minados</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Peers</div>
+        <div class="stat-value blue">${peers}</div>
+        <div class="stat-sub">conexiones</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Sesión</div>
+        <div class="stat-value green">+${s.sessionBlocks}</div>
+        <div class="stat-sub">bloques nuevos</div>
+      </div>
+    </div>
+
+    <div class="mempool-row">
+      <span class="mempool-label">🏊 Mempool</span>
+      <span class="mempool-count">${mempoolN} txs pendientes</span>
+    </div>
+
+    ${bestHash ? `
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:14px;font-family:var(--mono);font-size:10px;color:var(--text3);word-break:break-all">
+      <span style="color:var(--text3);text-transform:uppercase;letter-spacing:.4px;font-size:9px">Best block hash<br></span>
+      <span style="color:var(--blue)">${bestHash}</span>
+    </div>` : ''}
+
+    <div class="blocks-section-header">
+      <span class="section-title">📦 Últimos bloques</span>
+      <span class="blocks-count">${s.blocks.length} / 20</span>
+    </div>
+    ${blocksHtml}
+  `;
+
+  document.getElementById(`node${nodeId}-panel`).innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Render comparison
+// ═══════════════════════════════════════════════════════════════════════════
+function renderComparison() {
+  const s1 = state[1];
+  const s2 = state[2];
+  const c1 = s1.info?.blockchain;
+  const c2 = s2.info?.blockchain;
+  const m1 = s1.info?.mempool;
+  const m2 = s2.info?.mempool;
+  const n1 = s1.info?.network;
+  const n2 = s2.info?.network;
+
+  function cell(v, cls='') {
+    return `<td style="color:var(--text);${cls}">${v ?? '—'}</td>`;
+  }
+  function mono(v) { return `<span style="font-family:var(--mono)">${v ?? '—'}</span>`; }
+
+  const rows = [
+    ['Estado',          statusBadgeSmall(s1.online), statusBadgeSmall(s2.online)],
+    ['Altura',          mono(c1?.blocks),             mono(c2?.blocks)],
+    ['Dificultad',      mono(c1?.difficulty?.toFixed(4)), mono(c2?.difficulty?.toFixed(4))],
+    ['Mempool (txs)',   mono(m1?.size ?? 0),           mono(m2?.size ?? 0)],
+    ['Peers',           mono(n1?.connections),         mono(n2?.connections)],
+    ['Best Hash',       `<span style="font-family:var(--mono);font-size:10px;color:var(--blue)">${shortHash(c1?.bestblockhash)}</span>`,
+                        `<span style="font-family:var(--mono);font-size:10px;color:var(--blue)">${shortHash(c2?.bestblockhash)}</span>`],
+  ];
+
+  const tbody = rows.map(([label, v1, v2]) => `
+    <tr>
+      <td class="row-label">${label}</td>
+      <td style="text-align:center">${v1}</td>
+      <td style="text-align:center">${v2}</td>
+    </tr>`).join('');
+
+  document.getElementById('comparison-body').innerHTML = tbody;
+
+  // Sync banner
+  const h1 = c1?.bestblockhash;
+  const h2 = c2?.bestblockhash;
+  const banner = document.getElementById('sync-banner');
+
+  if (!s1.online && !s2.online) {
+    banner.className = 'sync-banner unknown';
+    banner.innerHTML = '<span>⚠️</span> Ambos nodos offline';
+  } else if (!h1 || !h2) {
+    banner.className = 'sync-banner unknown';
+    banner.innerHTML = '<span>⏳</span> Esperando datos de ambos nodos...';
+  } else if (h1 === h2) {
+    banner.className = 'sync-banner synced';
+    banner.innerHTML = '<span>✅</span> Nodos sincronizados — mismo tip block';
+  } else {
+    banner.className = 'sync-banner unsynced';
+    banner.innerHTML = `<span>⚠️</span> Nodos desincronizados — tips distintos (Δ height: ${Math.abs((c1?.blocks||0)-(c2?.blocks||0))})`;
+  }
+}
+
+function statusBadgeSmall(online) {
+  if (online === null) return '<span style="color:var(--text3)">—</span>';
+  const cls  = online ? 'online' : 'offline';
+  const txt  = online ? 'Online' : 'Offline';
+  return `<span class="status-badge ${cls}" style="display:inline-flex;font-size:11px;padding:2px 8px">
+    <span class="status-dot"></span>${txt}</span>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Block modal
+// ═══════════════════════════════════════════════════════════════════════════
+async function openBlock(nodeId, hash) {
+  const overlay = document.getElementById('modal-overlay');
+  const title   = document.getElementById('modal-title');
+  const body    = document.getElementById('modal-body');
+
+  title.textContent = `Bloque ${shortHash(hash)} — Nodo ${nodeId}`;
+  body.innerHTML    = '<div class="modal-spinner">⛏ Cargando bloque...</div>';
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  const blk = await apiFetch(`/api/node/${nodeId}/block/${hash}`);
+
+  if (blk.error) {
+    body.innerHTML = `<div class="modal-spinner" style="color:var(--red)">Error: ${blk.error}</div>`;
+    return;
+  }
+
+  // Meta fields
+  const metaFields = [
+    ['Altura',      blk.height,                             'orange'],
+    ['Hash',        blk.hash,                               ''],
+    ['Versión',     blk.version,                            ''],
+    ['Tiempo',      fmtTime(blk.time),                      ''],
+    ['Nonce',       blk.nonce,                              ''],
+    ['Bits',        blk.bits,                               ''],
+    ['Dificultad',  blk.difficulty?.toFixed(4),             ''],
+    ['Merkle Root', shortHash(blk.merkleroot),              ''],
+    ['Txs',         blk.tx?.length ?? 0,                   'orange'],
+    ['Tamaño',      fmtBytes(blk.size),                     ''],
+    ['Peso',        blk.weight ? blk.weight + ' WU' : '—', ''],
+    ['Parent',      shortHash(blk.previousblockhash),       ''],
+  ];
+
+  const metaHtml = metaFields.map(([k, v, cls]) => `
+    <div class="meta-item">
+      <div class="meta-key">${k}</div>
+      <div class="meta-value ${cls}">${v ?? '—'}</div>
+    </div>`).join('');
+
+  // Transactions
+  const txs = blk.tx || [];
+  const txHtml = txs.map((tx, idx) => {
+    const isCoinbase = tx.vin?.[0]?.coinbase !== undefined;
+    const sizeStr    = tx.size ? fmtBytes(tx.size) : '';
+
+    // Inputs
+    const inputsHtml = (tx.vin || []).map(inp => {
+      if (inp.coinbase) {
+        return `<div class="io-row"><span class="coinbase-label">COINBASE</span> ${inp.coinbase.slice(0,32)}…</div>`;
+      }
+      return `<div class="io-row">${shortHash(inp.txid)}<span style="color:var(--text3)">:${inp.vout}</span></div>`;
+    }).join('');
+
+    // Outputs
+    const outputsHtml = (tx.vout || []).map(out => {
+      const addr = out.scriptPubKey?.address || out.scriptPubKey?.type || 'script';
+      return `<div class="io-row">
+        <span style="color:var(--text)">${addr}</span>
+        <span style="float:right" class="io-value">${out.value?.toFixed(8)} BTC</span>
+      </div>`;
+    }).join('');
+
+    return `
+      <div class="tx-item" id="tx-${idx}">
+        <div class="tx-header" onclick="toggleTx(${idx})">
+          <span class="tx-txid">${isCoinbase ? '🏆 ' : ''}${tx.txid}</span>
+          <span class="tx-meta">${sizeStr} · ${tx.vin?.length||0} in / ${tx.vout?.length||0} out</span>
+          <span class="tx-arrow">▶</span>
+        </div>
+        <div class="tx-details">
+          <div class="io-section">
+            <div class="io-label">Inputs (${tx.vin?.length||0})</div>
+            ${inputsHtml}
+          </div>
+          <div class="io-section">
+            <div class="io-label">Outputs (${tx.vout?.length||0})</div>
+            ${outputsHtml}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  body.innerHTML = `
+    <div class="block-meta-grid">${metaHtml}</div>
+    <div class="tx-list-title">📋 Transacciones (${txs.length})</div>
+    ${txHtml || '<div style="color:var(--text3);text-align:center;padding:20px">Sin transacciones</div>'}
+  `;
+
+  // Auto-expand primera tx (coinbase)
+  if (txs.length > 0) toggleTx(0);
+}
+
+function toggleTx(idx) {
+  const el = document.getElementById(`tx-${idx}`);
+  if (el) el.classList.toggle('expanded');
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModalBtn();
+}
+function closeModalBtn() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModalBtn(); });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Polling loop
+// ═══════════════════════════════════════════════════════════════════════════
+async function pollInfo(nodeId) {
+  const data = await apiFetch(`/api/node/${nodeId}/info`);
+  const s = state[nodeId];
+  s.online = !data.error;
+  if (!data.error) {
+    s.info = data;
+    s.mempoolCount = data.mempool?.size ?? 0;
+  }
+  renderNodePanel(nodeId);
+  renderComparison();
+}
+
+async function pollBlocks(nodeId) {
+  if (!state[nodeId].online) return;
+
+  const data = await apiFetch(`/api/node/${nodeId}/blocks`);
+  if (data.error || !data.blocks) return;
+
+  const newBlocks = data.blocks;
+  const oldHashes = new Set(state[nodeId].blocks.map(b => b.hash));
+
+  newBlocks.forEach(b => { b._new = !oldHashes.has(b.hash); });
+  state[nodeId].blocks = newBlocks;
+  renderNodePanel(nodeId);
+}
+
+async function pollMempool(nodeId) {
+  if (!state[nodeId].online) return;
+  const data = await apiFetch(`/api/node/${nodeId}/mempool`);
+  if (!data.error && data.info) {
+    state[nodeId].mempoolCount = data.info.size ?? 0;
+    renderNodePanel(nodeId);
+  }
+}
+
+function updateTimestamp() {
+  const now = new Date();
+  document.getElementById('last-update').textContent =
+    now.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+
+  // Global dot — green si al menos un nodo online
+  const anyOnline = state[1].online || state[2].online;
+  const dot = document.getElementById('global-dot');
+  dot.className = 'pulse-dot' + (anyOnline ? '' : ' offline');
+}
+
+// ── Initial render (skeletons) ─────────────────────────────────────────────
+NODES.forEach(n => renderNodePanel(n.id));
+
+// ── First load ─────────────────────────────────────────────────────────────
+async function firstLoad() {
+  await Promise.all([pollInfo(1), pollInfo(2)]);
+  await Promise.all([pollBlocks(1), pollBlocks(2)]);
+  updateTimestamp();
+}
+firstLoad();
+
+// ── Intervals ──────────────────────────────────────────────────────────────
+setInterval(() => { pollInfo(1); pollInfo(2); updateTimestamp(); },    3000);
+setInterval(() => { pollBlocks(1); pollBlocks(2); },                   5000);
+setInterval(() => { pollMempool(1); pollMempool(2); },                10000);
+</script>
+</body>
+</html>

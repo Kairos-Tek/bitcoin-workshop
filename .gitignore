@@ -1,0 +1,10 @@
+# Server runtime files
+server.pid
+server.log
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
