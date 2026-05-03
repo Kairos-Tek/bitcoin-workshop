@@ -190,37 +190,63 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 })
                 return
 
-            # GET /api/node/{n}/blocks ────────────────────────────────────────
+            # GET /api/node/{n}/blocks[?offset=N] ──────────────────────────────
             if sub == "blocks":
+                # Parse offset from query string
+                qs = self.path.split("?")[1] if "?" in self.path else ""
+                params = {}
+                for part in qs.split("&"):
+                    if "=" in part:
+                        k, v = part.split("=", 1)
+                        params[k] = v
+                offset = max(0, int(params.get("offset", 0)))
+
                 chain_info, err = rpc.call("getblockchaininfo")
                 if err:
                     self.send_json({"error": str(err)})
                     return
 
                 tip_height = chain_info["blocks"]
+                start_height = tip_height - offset
                 blocks = []
-                hash_cur, _ = rpc.call("getblockhash", [tip_height])
 
-                for _ in range(min(20, tip_height + 1)):
-                    if not hash_cur:
-                        break
-                    blk, err = rpc.call("getblock", [hash_cur])
-                    if err or not blk:
-                        break
-                    blocks.append({
-                        "height":            blk["height"],
-                        "hash":              blk["hash"],
-                        "time":              blk["time"],
-                        "txcount":           len(blk.get("tx", [])),
-                        "size":              blk.get("size", 0),
-                        "weight":            blk.get("weight", 0),
-                        "previousblockhash": blk.get("previousblockhash", ""),
-                        "nonce":             blk.get("nonce", 0),
-                        "bits":              blk.get("bits", ""),
-                    })
-                    hash_cur = blk.get("previousblockhash")
+                if start_height >= 0:
+                    hash_cur, _ = rpc.call("getblockhash", [start_height])
+                    for _ in range(min(20, start_height + 1)):
+                        if not hash_cur:
+                            break
+                        blk, err = rpc.call("getblock", [hash_cur])
+                        if err or not blk:
+                            break
+                        blocks.append({
+                            "height":            blk["height"],
+                            "hash":              blk["hash"],
+                            "time":              blk["time"],
+                            "txcount":           len(blk.get("tx", [])),
+                            "size":              blk.get("size", 0),
+                            "weight":            blk.get("weight", 0),
+                            "previousblockhash": blk.get("previousblockhash", ""),
+                            "nonce":             blk.get("nonce", 0),
+                            "bits":              blk.get("bits", ""),
+                        })
+                        hash_cur = blk.get("previousblockhash")
 
                 self.send_json({"blocks": blocks, "tip_height": tip_height})
+                return
+
+            # GET /api/node/{n}/balance ──────────────────────────────────────
+            if sub == "balance":
+                balance, err = rpc.call("getbalance")
+                if err:
+                    # Wallet might not be loaded — try to load the first available
+                    wallets, werr = rpc.call("listwallets")
+                    if not werr and wallets:
+                        rpc.call("loadwallet", [wallets[0]])
+                        balance, err = rpc.call("getbalance")
+                self.send_json({
+                    "balance": balance,
+                    "error":   str(err) if err else None,
+                })
                 return
 
             # GET /api/node/{n}/block/{hash} ──────────────────────────────────

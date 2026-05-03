@@ -225,6 +225,26 @@
   .stat-value.blue   { color: var(--blue); }
   .stat-sub  { font-size: 10px; color: var(--text3); margin-top: 2px; word-break: break-all; font-family: var(--mono); }
 
+  /* ── Balance row ───────────────────────────────────────────────────── */
+  .balance-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(247,147,26,.07);
+    border: 1px solid rgba(247,147,26,.2);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+  }
+  .balance-label { font-size: 11px; color: var(--text2); }
+  .balance-value {
+    color: var(--orange);
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .balance-na { color: var(--text3); font-size: 11px; font-style: italic; }
+
   /* ── Mempool badge ─────────────────────────────────────────────────── */
   .mempool-row {
     display: flex;
@@ -247,6 +267,29 @@
     font-weight: 700;
     font-family: var(--mono);
   }
+
+  /* ── Block pagination ──────────────────────────────────────────────── */
+  .blocks-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    gap: 8px;
+  }
+  .nav-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text2);
+    font-size: 11px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    font-family: inherit;
+  }
+  .nav-btn:hover:not(:disabled) { background: var(--bg4); color: var(--text); }
+  .nav-btn:disabled { opacity: 0.3; cursor: default; }
+  .nav-page { font-size: 11px; color: var(--text3); font-family: var(--mono); flex: 1; text-align: center; }
 
   /* ── Blocks table ──────────────────────────────────────────────────── */
   .blocks-section-header {
@@ -582,8 +625,8 @@ const NODES = [
 
 // State
 const state = {
-  1: { info: null, blocks: [], online: null, mempoolCount: 0, sessionBlocks: 0, initialHeight: null },
-  2: { info: null, blocks: [], online: null, mempoolCount: 0, sessionBlocks: 0, initialHeight: null },
+  1: { info: null, blocks: [], online: null, mempoolCount: 0, sessionBlocks: 0, initialHeight: null, balance: null, blockPage: 0, tipHeight: null },
+  2: { info: null, blocks: [], online: null, mempoolCount: 0, sessionBlocks: 0, initialHeight: null, balance: null, blockPage: 0, tipHeight: null },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -653,6 +696,18 @@ function renderNodePanel(nodeId) {
     state[nodeId].sessionBlocks = chain.blocks - s.initialHeight;
   }
 
+  // Balance
+  const balanceHtml = s.balance !== null
+    ? `<span class="balance-value">${s.balance.toFixed(8)} BTC</span>`
+    : `<span class="balance-na">wallet no cargado</span>`;
+
+  // Blocks + pagination
+  const page      = s.blockPage;
+  const tipH      = s.tipHeight ?? 0;
+  const totalPages = tipH > 0 ? Math.floor(tipH / 20) + 1 : 1;
+  const canGoOlder = (page + 1) * 20 <= tipH;
+  const canGoNewer = page > 0;
+
   let blocksHtml = '';
   if (!online) {
     blocksHtml = `
@@ -665,7 +720,7 @@ function renderNodePanel(nodeId) {
     blocksHtml = [...Array(5)].map(() => `<div class="skeleton"></div>`).join('');
   } else {
     const rows = s.blocks.map((b, i) => `
-      <tr class="${i === 0 && b._new ? 'block-new' : ''}" onclick="openBlock(${nodeId}, '${b.hash}')">
+      <tr class="${i === 0 && b._new && page === 0 ? 'block-new' : ''}" onclick="openBlock(${nodeId}, '${b.hash}')">
         <td class="block-height">#${b.height}</td>
         <td class="block-hash" title="${b.hash}">${shortHash(b.hash)}</td>
         <td class="block-time">${fmtTime(b.time)}</td>
@@ -685,7 +740,12 @@ function renderNodePanel(nodeId) {
           </tr>
         </thead>
         <tbody>${rows}</tbody>
-      </table>`;
+      </table>
+      <div class="blocks-nav">
+        <button class="nav-btn" onclick="changePage(${nodeId}, 1)" ${canGoOlder ? '' : 'disabled'}>← Anteriores</button>
+        <span class="nav-page">p. ${page + 1} / ${totalPages}</span>
+        <button class="nav-btn" onclick="changePage(${nodeId}, -1)" ${canGoNewer ? '' : 'disabled'}>Más recientes →</button>
+      </div>`;
   }
 
   const html = `
@@ -721,6 +781,11 @@ function renderNodePanel(nodeId) {
       </div>
     </div>
 
+    <div class="balance-row">
+      <span class="balance-label">💰 Saldo wallet</span>
+      ${balanceHtml}
+    </div>
+
     <div class="mempool-row">
       <span class="mempool-label">🏊 Mempool</span>
       <span class="mempool-count">${mempoolN} txs pendientes</span>
@@ -733,8 +798,8 @@ function renderNodePanel(nodeId) {
     </div>` : ''}
 
     <div class="blocks-section-header">
-      <span class="section-title">📦 Últimos bloques</span>
-      <span class="blocks-count">${s.blocks.length} / 20</span>
+      <span class="section-title">📦 Bloques</span>
+      <span class="blocks-count">${s.blocks.length > 0 ? `#${s.blocks[s.blocks.length-1].height}–#${s.blocks[0].height}` : '—'}</span>
     </div>
     ${blocksHtml}
   `;
@@ -933,16 +998,51 @@ async function pollInfo(nodeId) {
 
 async function pollBlocks(nodeId) {
   if (!state[nodeId].online) return;
-
-  const data = await apiFetch(`/api/node/${nodeId}/blocks`);
+  const s = state[nodeId];
+  const offset = s.blockPage * 20;
+  const data = await apiFetch(`/api/node/${nodeId}/blocks?offset=${offset}`);
   if (data.error || !data.blocks) return;
 
-  const newBlocks = data.blocks;
-  const oldHashes = new Set(state[nodeId].blocks.map(b => b.hash));
+  const newTipHeight = data.tip_height;
 
-  newBlocks.forEach(b => { b._new = !oldHashes.has(b.hash); });
-  state[nodeId].blocks = newBlocks;
+  // New block arrived while browsing older pages → reset to page 0
+  if (s.tipHeight !== null && newTipHeight > s.tipHeight && s.blockPage > 0) {
+    s.blockPage = 0;
+    s.tipHeight = newTipHeight;
+    const fresh = await apiFetch(`/api/node/${nodeId}/blocks?offset=0`);
+    if (!fresh.error && fresh.blocks) {
+      const oldHashes = new Set(s.blocks.map(b => b.hash));
+      fresh.blocks.forEach(b => { b._new = !oldHashes.has(b.hash); });
+      s.blocks = fresh.blocks;
+    }
+    renderNodePanel(nodeId);
+    return;
+  }
+
+  const oldHashes = new Set(s.blocks.map(b => b.hash));
+  data.blocks.forEach(b => { b._new = !oldHashes.has(b.hash); });
+  s.blocks = data.blocks;
+  s.tipHeight = newTipHeight;
   renderNodePanel(nodeId);
+}
+
+async function pollBalance(nodeId) {
+  if (!state[nodeId].online) return;
+  const data = await apiFetch(`/api/node/${nodeId}/balance`);
+  if (!data.error && data.balance !== null && data.balance !== undefined) {
+    state[nodeId].balance = data.balance;
+    renderNodePanel(nodeId);
+  }
+}
+
+function changePage(nodeId, delta) {
+  const s = state[nodeId];
+  const newPage = s.blockPage + delta;
+  if (newPage < 0) return;
+  const maxPage = s.tipHeight !== null ? Math.floor(s.tipHeight / 20) : 0;
+  if (newPage > maxPage) return;
+  s.blockPage = newPage;
+  pollBlocks(nodeId);
 }
 
 async function pollMempool(nodeId) {
@@ -972,6 +1072,7 @@ NODES.forEach(n => renderNodePanel(n.id));
 async function firstLoad() {
   await Promise.all([pollInfo(1), pollInfo(2)]);
   await Promise.all([pollBlocks(1), pollBlocks(2)]);
+  await Promise.all([pollBalance(1), pollBalance(2)]);
   updateTimestamp();
 }
 firstLoad();
@@ -980,6 +1081,7 @@ firstLoad();
 setInterval(() => { pollInfo(1); pollInfo(2); updateTimestamp(); },    3000);
 setInterval(() => { pollBlocks(1); pollBlocks(2); },                   5000);
 setInterval(() => { pollMempool(1); pollMempool(2); },                10000);
+setInterval(() => { pollBalance(1); pollBalance(2); },                10000);
 </script>
 </body>
 </html>

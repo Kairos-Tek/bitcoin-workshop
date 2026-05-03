@@ -39,8 +39,9 @@ bitcoin-dashboard/
     ├── start-nodes.sh     ← Start both bitcoind processes
     ├── stop-nodes.sh      ← Stop both bitcoind processes
     ├── connect-nodes.sh   ← Connect node1 ↔ node2 as peers
-    ├── demo-standalone.sh ← Standalone demo: node1 mines independently (nodes isolated)
-    └── demo.sh            ← Full demo: wallets, mining, transaction (nodes connected)
+    ├── demo-standalone.sh   ← Standalone demo: node1 mines independently (nodes isolated)
+    ├── demo.sh              ← Full demo: wallets, mining, transaction (nodes connected)
+    └── send_transaction.sh  ← Send N BTC between nodes and confirm in one block
 ```
 
 ```
@@ -143,6 +144,24 @@ Runs the complete exercise with both nodes connected as peers from the beginning
 chmod +x scripts/demo.sh
 ./scripts/demo.sh
 ```
+
+---
+
+### Step 3b — Send a transaction manually
+
+Once the nodes have funds (after running either demo), you can send transactions between them at any time using `send_transaction.sh`:
+
+```bash
+chmod +x scripts/send_transaction.sh
+
+# Send 1 BTC from node1 to node2
+./scripts/send_transaction.sh 1 1 2
+
+# Send 0.5 BTC from node2 to node1
+./scripts/send_transaction.sh 0.5 2 1
+```
+
+The script validates that both nodes are online and that the source wallet has sufficient balance, then broadcasts the transaction and mines one block to confirm it. The dashboard updates automatically.
 
 ---
 
