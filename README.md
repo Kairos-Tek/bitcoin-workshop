@@ -131,7 +131,7 @@ chmod +x scripts/connect-nodes.sh
 
 Or manually:
 ```bash
-bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 addnode "127.0.0.1:2345" "add"
+bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 addnode "127.0.0.1:2346" "add"
 ```
 
 Verify node1 sees node2:
@@ -362,6 +362,4 @@ No npm, no pip installs, no bundlers — just `python3` and a browser.
 
 ## License
 
-MIT License — Copyright © 2026 Jorge Ordovás ([@joobid](https://github.com/joobid) on GitHub · [@joobid](https://x.com/joobid) on X)
-
-The [MIT License](https://en.wikipedia.org/wiki/MIT_License) is a short, permissive free-software license that grants maximum freedom to use, modify, sell and distribute software without complex restrictions. It allows integrating this code into proprietary (closed-source) projects without any obligation to share modifications — the only requirement is to preserve the original copyright notice.
+[MIT License](https://en.wikipedia.org/wiki/MIT_License) — Copyright © 2026 Jorge Ordovás ([@joobid](https://github.com/joobid) on GitHub · [@joobid](https://x.com/joobid) on X)
