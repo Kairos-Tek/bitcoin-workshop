@@ -112,121 +112,41 @@ Both should show `"chain": "regtest"` and `"blocks": 0`.
 
 ---
 
-### Step 3 — Create wallets
+### Step 3 — Run the demo
+
+Two modes are available depending on what you want to demonstrate.
+
+#### Option A — Standalone demo (nodes isolated)
+
+Runs the full exercise on **node1 only**, without connecting the nodes as peers. Node2 stays at block height 0 and is unaware of any transactions — even if node1 sends BTC to a node2 address.
 
 ```bash
-bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 createwallet "wallet1"
-bitcoin-cli -regtest -datadir=$HOME/bitcoin/node2 -rpcport=2345 createwallet "wallet2"
+chmod +x scripts/demo-standalone.sh
+./scripts/demo-standalone.sh
 ```
 
-This creates a wallet on each node. The wallet files (including public/private keys) are stored in `~/bitcoin/nodeX/regtest/wallets/walletX/wallet.dat`.
+Start the dashboard and compare the two panels side by side: node1 will show 102 blocks and a balance of ~49 BTC, while node2 shows height 0 and 0 BTC — even though node1 already sent it 1 BTC.
 
----
-
-### Step 4 — Connect the nodes as peers
+Now connect the nodes:
 
 ```bash
-chmod +x scripts/connect-nodes.sh
 ./scripts/connect-nodes.sh
 ```
 
-Or manually:
-```bash
-bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 addnode "127.0.0.1:2346" "add"
-```
+Watch node2 in the dashboard: it will detect the longer chain on node1 and sync automatically, jumping from height 0 to 102 and showing its 1 BTC balance. This illustrates the core principle of Bitcoin's peer-to-peer consensus — **nodes always adopt the longest valid chain**.
 
-Verify node1 sees node2:
-```bash
-bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 getpeerinfo
-```
+#### Option B — Full demo (nodes connected from the start)
 
-> You can use the machine's local network IP instead of `127.0.0.1` to connect nodes running on different machines.
-
----
-
-### Step 5 — Mine the first block
+Runs the complete exercise with both nodes connected as peers from the beginning. Blocks and transactions propagate in real time as they are mined.
 
 ```bash
-bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 -generate 1
-```
-
-Output shows the coinbase address and the block hash:
-```json
-{
-  "address": "bcrt1q0gm0yeguhpa2jm7sy3t2ueh26qnuh872g777r8",
-  "blocks": ["74bb1520f204ab70dd49d28691ba82403c791f85588fc809143b146c5067ed1e"]
-}
-```
-
-Check the balance of node1:
-```bash
-bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 getbalance
-```
-
-**Result: 0 BTC** — why? The coinbase reward can only be spent after **100 confirmations** (a safety measure against miners who might try to double-spend their reward). Additionally, in regtest the first 150 blocks each carry a reward of **50 BTC**.
-
----
-
-### Step 6 — Mine 100 more blocks
-
-```bash
-bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 -generate 100
-```
-
-Now block 1 has 100 confirmations. Check balance again:
-```bash
-bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 getbalance
-```
-
-**Result: 50 BTC** ✅
-
-Verify both nodes are in sync (node2 may take a few seconds):
-```bash
-bitcoin-cli -regtest -datadir="$HOME/bitcoin/node1" -rpcport=1234 getblockchaininfo
-bitcoin-cli -regtest -datadir="$HOME/bitcoin/node2" -rpcport=2345 getblockchaininfo
-```
-
-Both should show `"blocks": 101`.
-
----
-
-### Step 7 — Send 1 BTC from node1 to node2
-
-Get a receiving address for node2:
-```bash
-bitcoin-cli -regtest -datadir=$HOME/bitcoin/node2 -rpcport=2345 loadwallet "wallet2"
-NODE2_ADDR=$(bitcoin-cli -regtest -datadir=$HOME/bitcoin/node2 -rpcport=2345 getnewaddress "wallet2")
-echo $NODE2_ADDR
-```
-
-Send 1 BTC (replace the address with the one you got above):
-```bash
-bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 \
-  -named sendtoaddress address="$NODE2_ADDR" amount=1 fee_rate=25
-```
-
-You'll get back a **transaction ID (txid)**. Check node2's balance — it will still be **0 BTC** because the transaction is unconfirmed (in the mempool, not yet in a block).
-
----
-
-### Step 8 — Mine a block to confirm the transaction
-
-```bash
-bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 -generate 1
-```
-
-Now check balances on both nodes:
-```bash
-bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 getbalance
-# → 48.99996475 BTC  (50 − 1 sent − fee)
-
-bitcoin-cli -regtest -datadir=$HOME/bitcoin/node2 -rpcport=2345 getbalance
-# → 1.00000000 BTC
+chmod +x scripts/demo.sh
+./scripts/demo.sh
 ```
 
 ---
 
-### Step 9 — Start the dashboard
+### Step 4 — Start the dashboard
 
 ```bash
 chmod +x start.sh stop.sh
@@ -243,41 +163,7 @@ Block #102 showing two transactions: the **coinbase** (50.00003525 BTC mined rew
 
 ---
 
-### Step 10 — Run the automated demo
-
-Two demo modes are available depending on what you want to demonstrate.
-
-#### Option A — Standalone demo (nodes isolated)
-
-Runs all the exercise steps on **node1 only**, without connecting the nodes as peers. Node2 stays at block height 0 and is unaware of any transactions — even if node1 sends BTC to a node2 address.
-
-```bash
-chmod +x scripts/demo-standalone.sh
-./scripts/demo-standalone.sh
-```
-
-After the demo completes, open the dashboard (`./start.sh`) and compare the two panels side by side: node1 will show 102 blocks and a balance of ~49 BTC, while node2 shows height 0 and 0 BTC — even though node1 already sent it 1 BTC.
-
-Now connect the nodes:
-
-```bash
-./scripts/connect-nodes.sh
-```
-
-Watch node2 in the dashboard: it will detect the longer chain on node1 and sync automatically, jumping from height 0 to 102 and showing its 1 BTC balance. This illustrates the core principle of Bitcoin's peer-to-peer consensus — nodes always adopt the longest valid chain.
-
-#### Option B — Full demo (nodes connected from the start)
-
-Runs the complete exercise with both nodes connected as peers from step 1. Blocks and transactions propagate in real time as they are mined.
-
-```bash
-chmod +x scripts/demo.sh
-./scripts/demo.sh
-```
-
----
-
-### Step 11 — Stop everything
+### Step 5 — Stop everything
 
 ```bash
 # Stop the dashboard
