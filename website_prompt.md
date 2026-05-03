@@ -28,11 +28,12 @@ that acts as an HTTP proxy between the dashboard and the nodes:
 
 - Listen on http://localhost:18500
 - Expose these JSON endpoints:
-  * GET /api/node/{1|2}/info         → getblockchaininfo + getnetworkinfo
-  * GET /api/node/{1|2}/blocks       → last 20 blocks (hash, height, time, txcount, size)
-  * GET /api/node/{1|2}/block/{hash} → getblock <hash> 2 (with full transactions)
-  * GET /api/node/{1|2}/mempool      → getmempoolinfo + txids from mempool
-  * GET /api/status                  → connection status of both nodes
+  * GET /api/node/{1|2}/info            → getblockchaininfo + getnetworkinfo
+  * GET /api/node/{1|2}/blocks?offset=N → 20 blocks starting from tip-N (default 0)
+  * GET /api/node/{1|2}/block/{hash}    → getblock <hash> 2 (with full transactions)
+  * GET /api/node/{1|2}/mempool         → getmempoolinfo + txids from mempool
+  * GET /api/node/{1|2}/balance         → getbalance (auto-loads wallet if needed)
+  * GET /api/status                     → connection status of both nodes
 
 - Each Bitcoin call uses direct HTTP RPC (requests to http://127.0.0.1:<rpcport>/
   with basic auth) — do NOT use subprocess/bitcoin-cli for the server
@@ -55,8 +56,18 @@ Create a self-contained `index.html` file (HTML + CSS + JS in one file) with:
 - Visual status indicator (green = online, red = offline)
 - Counter of blocks mined in the current session
 
+### Per-node wallet info
+- Wallet balance (BTC) fetched from a dedicated /api/node/{1|2}/balance endpoint
+  that calls getbalance and auto-loads the wallet if not already loaded
+- Display balance prominently below the stats grid, refreshed every 10 seconds
+
 ### Block viewer (per node)
-- List of the last 20 blocks in descending order
+- Paginated block list: 20 blocks per page, with "← Anteriores" / "Más recientes →"
+  navigation buttons and a page indicator (e.g. "p. 1 / 6")
+- The blocks endpoint accepts an ?offset=N query parameter so the server returns
+  the 20 blocks starting from tip - N, enabling backward navigation
+- When a new block arrives while the user is browsing an older page, automatically
+  reset to page 0 (most recent blocks) and flash the new block orange
 - Each row shows: height, hash (first+last 8 chars), human-readable timestamp,
   number of transactions, size in bytes
 - Clicking a block → side panel/modal with:
