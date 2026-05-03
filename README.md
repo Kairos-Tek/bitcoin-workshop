@@ -4,10 +4,6 @@ A real-time web dashboard to monitor two Bitcoin nodes running in **regtest** mo
 
 Built as part of the **[AFI Master in Data Science & AI](https://www.afiglobaleducation.com/master-fulltime/master-en-ciencia-de-datos-e-inteligencia-artificial) — Blockchain Analytics** practical workshop.
 
-![Dashboard](<images/bitcoin-dashboard 1.png>)
-
-Both nodes online at block height 182, 1 peer each, with the last 20 blocks listed per node.
-
 ---
 
 ## What is this?
@@ -173,6 +169,10 @@ chmod +x start.sh stop.sh
 ```
 
 This starts `server.py` on port 18500 and opens `http://localhost:18500` in your browser.
+
+![Dashboard](<images/bitcoin-dashboard 1.png>)
+
+Both nodes online at block height 182, 1 peer each, with the last 20 blocks listed per node.
 
 ![Block detail](<images/bitcoin-dashboard 2.png>)
 
