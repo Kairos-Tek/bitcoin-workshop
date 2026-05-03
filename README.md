@@ -2,7 +2,7 @@
 
 A real-time web dashboard to monitor two Bitcoin nodes running in **regtest** mode. Visualizes blocks, transactions, mempool and network status — all from a single browser tab.
 
-Built as part of the **AFI Master in Data Science & AI — Blockchain Analytics** practical workshop.
+Built as part of the **[AFI Master in Data Science & AI](https://www.afiglobaleducation.com/master-fulltime/master-en-ciencia-de-datos-e-inteligencia-artificial) — Blockchain Analytics** practical workshop.
 
 ![Dashboard](<images/bitcoin-dashboard 1.png>)
 
