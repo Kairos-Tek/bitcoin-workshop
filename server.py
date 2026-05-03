@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 Bitcoin Regtest Dashboard — API Server
-Lee los ficheros .cookie de ~/bitcoin/nodo1 y ~/bitcoin/nodo2.
-Sirve una API JSON en http://localhost:18500
+Reads .cookie files from ~/bitcoin/node1 and ~/bitcoin/node2.
+Serves a JSON API on http://localhost:18500
 """
 
 import json
@@ -19,16 +19,16 @@ BITCOIN_DIR = Path.home() / "bitcoin"
 
 NODE_CONFIGS = [
     {
-        "name":    "nodo1",
+        "name":    "node1",
         "rpchost": "127.0.0.1",
         "rpcport": 1234,
-        "datadir": BITCOIN_DIR / "nodo1",
+        "datadir": BITCOIN_DIR / "node1",
     },
     {
-        "name":    "nodo2",
+        "name":    "node2",
         "rpchost": "127.0.0.1",
         "rpcport": 2345,
-        "datadir": BITCOIN_DIR / "nodo2",
+        "datadir": BITCOIN_DIR / "node2",
     },
 ]
 
@@ -168,7 +168,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 node_idx = int(parts[2]) - 1
                 assert 0 <= node_idx < len(self.rpcs)
             except Exception:
-                self.send_json({"error": "Número de nodo inválido (usa 1 o 2)"}, 400)
+                self.send_json({"error": "Invalid node number (use 1 or 2)"}, 400)
                 return
 
             rpc  = self.rpcs[node_idx]
@@ -244,10 +244,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 })
                 return
 
-            self.send_json({"error": f"Endpoint desconocido: {path}"}, 404)
+            self.send_json({"error": f"Unknown endpoint: {path}"}, 404)
             return
 
-        self.send_json({"error": "No encontrado"}, 404)
+        self.send_json({"error": "Not found"}, 404)
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────

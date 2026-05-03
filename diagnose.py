@@ -6,8 +6,8 @@ from pathlib import Path
 BITCOIN_DIR = Path.home() / "bitcoin"
 
 NODES = [
-    {"name": "nodo1", "rpcport": 1234},
-    {"name": "nodo2", "rpcport": 2345},
+    {"name": "node1", "rpcport": 1234},
+    {"name": "node2", "rpcport": 2345},
 ]
 
 def read_cookie(name):

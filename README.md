@@ -2,6 +2,8 @@
 
 A real-time web dashboard to monitor two Bitcoin nodes running in **regtest** mode. Visualizes blocks, transactions, mempool and network status — all from a single browser tab.
 
+Built as part of the **AFI Master in Data Science & AI — Blockchain Analytics** practical workshop.
+
 ![Dashboard](<images/bitcoin-dashboard 1.png>)
 
 Both nodes online at block height 182, 1 peer each, with the last 20 blocks listed per node.
@@ -23,14 +25,21 @@ When developing or testing Bitcoin applications, you typically run local nodes i
 
 ```
 ~/bitcoin/
-├── nodo1/   ← Bitcoin Core node 1  (RPC port 1234)
-└── nodo2/   ← Bitcoin Core node 2  (RPC port 2345)
+├── node1/   ← Bitcoin Core node 1  (RPC port 1234)
+└── node2/   ← Bitcoin Core node 2  (RPC port 2345)
 
-~/claude/bitcoin-dashboard/
-├── server.py    ← Python HTTP API server (port 18500)
-├── index.html   ← Single-page dashboard (served via server.py)
-├── start.sh     ← Start server + open browser
-└── stop.sh      ← Stop server
+bitcoin-dashboard/
+├── server.py          ← Python HTTP API server (port 18500)
+├── index.html         ← Single-page dashboard (served via server.py)
+├── start.sh           ← Start dashboard server + open browser
+├── stop.sh            ← Stop dashboard server
+└── scripts/
+    ├── install-mac.sh     ← Install Bitcoin Core on macOS
+    ├── install-linux.sh   ← Install Bitcoin Core on Linux / WSL2
+    ├── start-nodes.sh     ← Start both bitcoind processes
+    ├── stop-nodes.sh      ← Stop both bitcoind processes
+    ├── connect-nodes.sh   ← Connect node1 ↔ node2 as peers
+    └── demo.sh            ← Full demo: wallets, mining, transaction
 ```
 
 ```
@@ -44,62 +53,220 @@ Browser  ──fetch──▶  server.py :18500  ──JSON-RPC──▶  bitcoi
 
 ## Requirements
 
-- **macOS** (tested on macOS Sequoia)
-- **Bitcoin Core** installed (`bitcoind` and `bitcoin-cli` in PATH)
+- **macOS** or **Linux** (Ubuntu/Debian, including WSL2 on Windows 11)
+- **Bitcoin Core** (installed via the scripts below)
 - **Python 3.9+** (no external dependencies — stdlib only)
-- Two `bitcoind` nodes running in regtest mode
+- **Homebrew** (macOS only — https://brew.sh)
 
 ---
 
-## Node setup
+## Step-by-step guide
 
-If you don't have the nodes running yet, start them with:
+### Step 1 — Install Bitcoin Core
 
+**macOS:**
 ```bash
-# Node 1
-bitcoind \
-  -datadir=$HOME/bitcoin/nodo1 \
-  -regtest \
-  -port=1234 \
-  -rpcport=1234 \
-  -bind=127.0.0.1:1235=onion \
-  -daemon
-
-# Node 2
-bitcoind \
-  -datadir=$HOME/bitcoin/nodo2 \
-  -regtest \
-  -port=2345 \
-  -rpcport=2345 \
-  -bind=127.0.0.1:2346=onion \
-  -daemon
+chmod +x scripts/install-mac.sh
+./scripts/install-mac.sh
 ```
 
-Connect them to each other:
+This runs `brew install bitcoin` and creates the `~/bitcoin/node1` and `~/bitcoin/node2` directories.
+
+**Linux / WSL2:**
 ```bash
-bitcoin-cli -datadir=$HOME/bitcoin/nodo2 -regtest addnode "127.0.0.1:1234" "add"
+chmod +x scripts/install-linux.sh
+./scripts/install-linux.sh
+source ~/.bashrc   # reload PATH
+```
+
+This downloads Bitcoin Core 27.2, extracts it to `~/bitcoin-core`, adds it to your PATH, and creates the node directories.
+
+> **Manual alternative:** Download the right binary for your platform from https://bitcoin.org/en/download
+
+---
+
+### Step 2 — Start the Bitcoin nodes
+
+```bash
+chmod +x scripts/start-nodes.sh
+./scripts/start-nodes.sh
+```
+
+This starts two `bitcoind` processes in regtest mode, each with its own data directory and ports:
+
+| Node  | P2P port | RPC port | Data directory        |
+|-------|----------|----------|-----------------------|
+| node1 | 1234     | 1234     | `~/bitcoin/node1`     |
+| node2 | 2345     | 2345     | `~/bitcoin/node2`     |
+
+You can verify the nodes are running with:
+```bash
+bitcoin-cli -regtest -datadir="$HOME/bitcoin/node1" -rpcport=1234 getblockchaininfo
+bitcoin-cli -regtest -datadir="$HOME/bitcoin/node2" -rpcport=2345 getblockchaininfo
+```
+
+Both should show `"chain": "regtest"` and `"blocks": 0`.
+
+> **Tip:** Open two extra terminal tabs running `tail -f ~/bitcoin/node1/regtest/debug.log` and `tail -f ~/bitcoin/node2/regtest/debug.log` to see live node activity throughout the exercise.
+
+---
+
+### Step 3 — Create wallets
+
+```bash
+bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 createwallet "wallet1"
+bitcoin-cli -regtest -datadir=$HOME/bitcoin/node2 -rpcport=2345 createwallet "wallet2"
+```
+
+This creates a wallet on each node. The wallet files (including public/private keys) are stored in `~/bitcoin/nodeX/regtest/wallets/walletX/wallet.dat`.
+
+---
+
+### Step 4 — Connect the nodes as peers
+
+```bash
+chmod +x scripts/connect-nodes.sh
+./scripts/connect-nodes.sh
+```
+
+Or manually:
+```bash
+bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 addnode "127.0.0.1:2345" "add"
+```
+
+Verify node1 sees node2:
+```bash
+bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 getpeerinfo
+```
+
+> You can use the machine's local network IP instead of `127.0.0.1` to connect nodes running on different machines.
+
+---
+
+### Step 5 — Mine the first block
+
+```bash
+bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 -generate 1
+```
+
+Output shows the coinbase address and the block hash:
+```json
+{
+  "address": "bcrt1q0gm0yeguhpa2jm7sy3t2ueh26qnuh872g777r8",
+  "blocks": ["74bb1520f204ab70dd49d28691ba82403c791f85588fc809143b146c5067ed1e"]
+}
+```
+
+Check the balance of node1:
+```bash
+bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 getbalance
+```
+
+**Result: 0 BTC** — why? The coinbase reward can only be spent after **100 confirmations** (a safety measure against miners who might try to double-spend their reward). Additionally, in regtest the first 150 blocks each carry a reward of **50 BTC**.
+
+---
+
+### Step 6 — Mine 100 more blocks
+
+```bash
+bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 -generate 100
+```
+
+Now block 1 has 100 confirmations. Check balance again:
+```bash
+bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 getbalance
+```
+
+**Result: 50 BTC** ✅
+
+Verify both nodes are in sync (node2 may take a few seconds):
+```bash
+bitcoin-cli -regtest -datadir="$HOME/bitcoin/node1" -rpcport=1234 getblockchaininfo
+bitcoin-cli -regtest -datadir="$HOME/bitcoin/node2" -rpcport=2345 getblockchaininfo
+```
+
+Both should show `"blocks": 101`.
+
+---
+
+### Step 7 — Send 1 BTC from node1 to node2
+
+Get a receiving address for node2:
+```bash
+bitcoin-cli -regtest -datadir=$HOME/bitcoin/node2 -rpcport=2345 loadwallet "wallet2"
+NODE2_ADDR=$(bitcoin-cli -regtest -datadir=$HOME/bitcoin/node2 -rpcport=2345 getnewaddress "wallet2")
+echo $NODE2_ADDR
+```
+
+Send 1 BTC (replace the address with the one you got above):
+```bash
+bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 \
+  -named sendtoaddress address="$NODE2_ADDR" amount=1 fee_rate=25
+```
+
+You'll get back a **transaction ID (txid)**. Check node2's balance — it will still be **0 BTC** because the transaction is unconfirmed (in the mempool, not yet in a block).
+
+---
+
+### Step 8 — Mine a block to confirm the transaction
+
+```bash
+bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 -generate 1
+```
+
+Now check balances on both nodes:
+```bash
+bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 getbalance
+# → 48.99996475 BTC  (50 − 1 sent − fee)
+
+bitcoin-cli -regtest -datadir=$HOME/bitcoin/node2 -rpcport=2345 getbalance
+# → 1.00000000 BTC
 ```
 
 ---
 
-## Running the dashboard
+### Step 9 — Start the dashboard
 
 ```bash
-git clone https://github.com/joobid/bitcoin-dashboard.git
-cd bitcoin-dashboard
-
 chmod +x start.sh stop.sh
 ./start.sh
 ```
 
-This will:
-1. Start `server.py` in the background on port `18500`
-2. Open `http://localhost:18500` in your default browser
-3. Save the server PID to `server.pid` for clean shutdown
+This starts `server.py` on port 18500 and opens `http://localhost:18500` in your browser.
 
-To stop:
+![Block detail](<images/bitcoin-dashboard 2.png>)
+
+Block #102 showing two transactions: the **coinbase** (50.00003525 BTC mined reward) and the **1 BTC payment** sent to node2's wallet, with 48.99996475 BTC returned as change.
+
+> **Want to generate this dashboard with AI?** See [`website_prompt.md`](website_prompt.md) for the full prompt used to build it with Claude.
+
+---
+
+### Step 10 — Run the automated demo
+
+The `demo.sh` script runs all the steps above automatically:
+
 ```bash
+chmod +x scripts/demo.sh
+./scripts/demo.sh
+```
+
+---
+
+### Step 11 — Stop everything
+
+```bash
+# Stop the dashboard
 ./stop.sh
+
+# Stop the Bitcoin nodes
+./scripts/stop-nodes.sh
+```
+
+Or individually:
+```bash
+bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 stop
+bitcoin-cli -regtest -datadir=$HOME/bitcoin/node2 -rpcport=2345 stop
 ```
 
 ---
@@ -122,12 +289,10 @@ To stop:
 - **Click any block** to open the detail modal
 
 ### Block detail modal
-
-![Block detail](<images/bitcoin-dashboard 2.png>)
-
-Block #102 containing two transactions: the **coinbase** (50.00003525 BTC mined reward) and a **1 BTC payment** sent to `bcrt1qs4gat...ewdnker`, with 48.99996475 BTC returned as change.
-
-The modal shows all block header fields (version, merkle root, bits, nonce, difficulty, weight) and every transaction fully expanded with inputs and outputs.
+- All block header fields: version, merkle root, bits, nonce, difficulty, weight
+- Full transaction list — each transaction expandable showing:
+  - All inputs (coinbase or `txid:vout`)
+  - All outputs with address and BTC value
 
 ### Real-time updates
 | Data | Polling interval |
@@ -161,12 +326,12 @@ New blocks flash orange when detected.
 
 ## Configuration
 
-Node config is hardcoded in `server.py` (top of file). Change ports or paths here if your setup differs:
+Node config is at the top of `server.py`. Change ports or paths here if your setup differs:
 
 ```python
 NODE_CONFIGS = [
-    {"name": "nodo1", "rpchost": "127.0.0.1", "rpcport": 1234, "datadir": BITCOIN_DIR / "nodo1"},
-    {"name": "nodo2", "rpchost": "127.0.0.1", "rpcport": 2345, "datadir": BITCOIN_DIR / "nodo2"},
+    {"name": "node1", "rpchost": "127.0.0.1", "rpcport": 1234, "datadir": BITCOIN_DIR / "node1"},
+    {"name": "node2", "rpchost": "127.0.0.1", "rpcport": 2345, "datadir": BITCOIN_DIR / "node2"},
 ]
 ```
 
@@ -174,21 +339,11 @@ Authentication uses Bitcoin Core's auto-generated `.cookie` files — no manual 
 
 ---
 
-## Mining test blocks
+## Useful references
 
-```bash
-# Create a wallet on node 1
-bitcoin-cli -datadir=$HOME/bitcoin/nodo1 -regtest createwallet "test"
-
-# Get a receiving address
-ADDR=$(bitcoin-cli -datadir=$HOME/bitcoin/nodo1 -regtest getnewaddress)
-
-# Mine 10 blocks
-bitcoin-cli -datadir=$HOME/bitcoin/nodo1 -regtest generatetoaddress 10 $ADDR
-
-# Send a transaction
-bitcoin-cli -datadir=$HOME/bitcoin/nodo1 -regtest sendtoaddress <destination> 1.5
-```
+- [Bitcoin Core API calls list](https://en.bitcoin.it/wiki/Original_Bitcoin_client/API_calls_list)
+- [Understanding Bitcoin's on-disk data](https://bitcoindev.network/understanding-the-data/)
+- [Bitcoin Core download](https://bitcoin.org/en/download)
 
 ---
 
@@ -207,4 +362,6 @@ No npm, no pip installs, no bundlers — just `python3` and a browser.
 
 ## License
 
-MIT
+MIT License — Copyright © 2026 Jorge Ordovás ([@joobid](https://github.com/joobid) on GitHub · [@joobid](https://x.com/joobid) on X)
+
+The [MIT License](https://en.wikipedia.org/wiki/MIT_License) is a short, permissive free-software license that grants maximum freedom to use, modify, sell and distribute software without complex restrictions. It allows integrating this code into proprietary (closed-source) projects without any obligation to share modifications — the only requirement is to preserve the original copyright notice.
