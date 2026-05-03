@@ -39,7 +39,8 @@ bitcoin-dashboard/
     ├── start-nodes.sh     ← Start both bitcoind processes
     ├── stop-nodes.sh      ← Stop both bitcoind processes
     ├── connect-nodes.sh   ← Connect node1 ↔ node2 as peers
-    └── demo.sh            ← Full demo: wallets, mining, transaction
+    ├── demo-standalone.sh ← Standalone demo: node1 mines independently (nodes isolated)
+    └── demo.sh            ← Full demo: wallets, mining, transaction (nodes connected)
 ```
 
 ```
@@ -244,7 +245,30 @@ Block #102 showing two transactions: the **coinbase** (50.00003525 BTC mined rew
 
 ### Step 10 — Run the automated demo
 
-The `demo.sh` script runs all the steps above automatically:
+Two demo modes are available depending on what you want to demonstrate.
+
+#### Option A — Standalone demo (nodes isolated)
+
+Runs all the exercise steps on **node1 only**, without connecting the nodes as peers. Node2 stays at block height 0 and is unaware of any transactions — even if node1 sends BTC to a node2 address.
+
+```bash
+chmod +x scripts/demo-standalone.sh
+./scripts/demo-standalone.sh
+```
+
+After the demo completes, open the dashboard (`./start.sh`) and compare the two panels side by side: node1 will show 102 blocks and a balance of ~49 BTC, while node2 shows height 0 and 0 BTC — even though node1 already sent it 1 BTC.
+
+Now connect the nodes:
+
+```bash
+./scripts/connect-nodes.sh
+```
+
+Watch node2 in the dashboard: it will detect the longer chain on node1 and sync automatically, jumping from height 0 to 102 and showing its 1 BTC balance. This illustrates the core principle of Bitcoin's peer-to-peer consensus — nodes always adopt the longest valid chain.
+
+#### Option B — Full demo (nodes connected from the start)
+
+Runs the complete exercise with both nodes connected as peers from step 1. Blocks and transactions propagate in real time as they are mined.
 
 ```bash
 chmod +x scripts/demo.sh
