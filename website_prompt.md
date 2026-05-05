@@ -12,14 +12,13 @@ I want you to build a complete dashboard to visualize blocks and transactions in
 
 1. List the contents of ~/bitcoin and understand the structure of the two nodes:
    - Find the directories for each node (node1/ and node2/)
-   - Read the bitcoin.conf file of each node to extract:
-     * rpcuser, rpcpassword, rpcport
-     * datadir, port (P2P)
-     * any other relevant configuration
+   - Bitcoin Core uses cookie-based authentication by default. Find the .cookie file
+     for each node at: ~/bitcoin/node{1,2}/regtest/.cookie
+     (format: __cookie__:<password> — use this for Basic auth in RPC calls)
+   - Note the RPC ports: node1 uses 1234, node2 uses 2345
    - Verify the nodes are active by running:
-     bitcoin-cli -conf=<path_conf_node1> getblockchaininfo
-     bitcoin-cli -conf=<path_conf_node2> getblockchaininfo
-   - Note the RPC port of each node
+     bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234 getblockchaininfo
+     bitcoin-cli -regtest -datadir=$HOME/bitcoin/node2 -rpcport=2345 getblockchaininfo
 
 ## STEP 2 — Backend: local API server
 
@@ -28,18 +27,23 @@ that acts as an HTTP proxy between the dashboard and the nodes:
 
 - Listen on http://localhost:18500
 - Expose these JSON endpoints:
-  * GET /api/node/{1|2}/info            → getblockchaininfo + getnetworkinfo
+  * GET /api/node/{1|2}/info            → getblockchaininfo + getnetworkinfo + getmempoolinfo
   * GET /api/node/{1|2}/blocks?offset=N → 20 blocks starting from tip-N (default 0)
   * GET /api/node/{1|2}/block/{hash}    → getblock <hash> 2 (with full transactions)
-  * GET /api/node/{1|2}/mempool         → getmempoolinfo + txids from mempool
-  * GET /api/node/{1|2}/balance         → getbalance (auto-loads wallet if needed)
-  * GET /api/status                     → connection status of both nodes
+  * GET /api/node/{1|2}/mempool         → getmempoolinfo + txids from getrawmempool
+  * GET /api/node/{1|2}/balance         → getbalance + first wallet address; auto-loads
+                                          wallet if not loaded; returns {balance, address, error}
+  * GET /api/status                     → connection status of both nodes (includes cookie_path,
+                                          cookie_exists, rpc_error for diagnostics)
 
-- Each Bitcoin call uses direct HTTP RPC (requests to http://127.0.0.1:<rpcport>/
-  with basic auth) — do NOT use subprocess/bitcoin-cli for the server
+- Authentication: read the .cookie file from ~/bitcoin/node{N}/regtest/.cookie on each
+  request; refresh automatically on HTTP 401 (cookie regenerates on node restart)
+- Each Bitcoin call uses direct HTTP RPC — do NOT use subprocess/bitcoin-cli for the server
 - Add CORS headers so the HTML can consume the API
 - Handle connection errors gracefully (node down → respond with {error: "..."})
 - Use JSON-RPC 1.0 (Bitcoin Core only accepts this version)
+- The /api/node/{n}/blocks endpoint must parse the ?offset=N query parameter and return
+  {blocks: [...], tip_height: N} — tip_height is needed by the frontend for pagination
 
 ## STEP 3 — Frontend: single HTML dashboard
 
@@ -53,16 +57,16 @@ Create a self-contained `index.html` file (HTML + CSS + JS in one file) with:
 ### Per-node panel
 - Status card: chain height, difficulty, best block hash (truncated),
   connected peers, mempool size
-- Visual status indicator (green = online, red = offline)
+- Visual status indicator (green = online, red = offline) with animated pulse dot
 - Counter of blocks mined in the current session
 
 ### Per-node wallet info
-- Wallet balance (BTC) fetched from a dedicated /api/node/{1|2}/balance endpoint
-  that calls getbalance and auto-loads the wallet if not already loaded
-- Display balance prominently below the stats grid, refreshed every 10 seconds
+- Wallet balance (BTC) fetched from /api/node/{1|2}/balance, displayed prominently
+  in an orange-tinted row below the stats grid, refreshed every 10 seconds
+- Show a "no wallet" message if the node has no wallet loaded
 
 ### Block viewer (per node)
-- Paginated block list: 20 blocks per page, with "← Anteriores" / "Más recientes →"
+- Paginated block list: 20 blocks per page, with "← Older" / "Newer →"
   navigation buttons and a page indicator (e.g. "p. 1 / 6")
 - The blocks endpoint accepts an ?offset=N query parameter so the server returns
   the 20 blocks starting from tip - N, enabling backward navigation
@@ -70,49 +74,70 @@ Create a self-contained `index.html` file (HTML + CSS + JS in one file) with:
   reset to page 0 (most recent blocks) and flash the new block orange
 - Each row shows: height, hash (first+last 8 chars), human-readable timestamp,
   number of transactions, size in bytes
-- Clicking a block → side panel/modal with:
-  * All block fields (version, merkleroot, bits, nonce, etc.)
-  * List of transactions in the block, each expandable showing:
-    - txid, size, inputs (coinbase or prev_txid:vout + value) and outputs (address + BTC value)
+- Clicking a block → modal with:
+  * All block header fields (version, merkle root, bits, nonce, difficulty, weight)
+  * Full transaction list — each transaction expandable showing:
+    - txid, size, inputs (coinbase label or prev_txid:vout) and outputs (address + BTC value)
 
 ### Real-time updates
 - Automatic polling every 3 seconds to /api/node/{1|2}/info
 - Block polling every 5 seconds
 - When a new block appears → orange highlight animation on the new row
-- Mempool refreshed every 10 seconds with a badge showing the number of pending txs
+- Mempool refreshed every 10 seconds with a badge showing pending tx count
 
 ### Bottom panel: comparative view
 - Side-by-side table comparing both nodes: height, tip hash, peers, mempool
-- Indicator of whether the nodes are in sync (same tip block hash)
+- Sync indicator: green if both nodes share the same tip block hash, red if diverged
 
-## STEP 4 — Launch script
+## STEP 4 — Supporting scripts
 
-Create a `start.sh` file that:
+Create a `scripts/` folder with these bash scripts (compatible with bash 3.2 / macOS):
+
+- `install-mac.sh`     — installs Bitcoin Core via Homebrew; creates ~/bitcoin/node1 and node2
+- `install-linux.sh`   — downloads Bitcoin Core 27.2 for Linux/WSL2; adds to PATH
+- `start-nodes.sh`     — starts both bitcoind processes in regtest mode:
+                          node1: P2P 1235, RPC 1234, datadir ~/bitcoin/node1
+                          node2: P2P 2346, RPC 2345, datadir ~/bitcoin/node2
+- `stop-nodes.sh`      — stops both nodes gracefully via bitcoin-cli stop
+- `connect-nodes.sh`   — connects node1 ↔ node2 as peers via addnode
+- `mine-blocks.sh`     — parameters: <num_blocks> <node>; mines N blocks on the given node
+- `send-transaction.sh`— parameters: <amount> <source_node> <dest_node>;
+                          validates balance, broadcasts tx, shows mempool prompt, mines 1 block
+                          to confirm; uses if/else instead of declare -A for bash 3.2 compat
+- `demo-standalone.sh` — full exercise on node1 only (nodes not connected as peers):
+                          create wallets → mine 101 blocks → send 1 BTC → mine 1 block to confirm
+- `demo-full.sh`       — same exercise with both nodes connected from the start
+
+## STEP 5 — Launch scripts
+
+Create a `start-dashboard.sh` file that:
 1. Starts server.py in the background (saving the PID to server.pid)
 2. Opens the dashboard at http://localhost:18500 in the default browser
 3. Shows the server URL and how to stop it in the console
 
-And a `stop.sh` that reads server.pid and kills the process.
+And a `stop-dashboard.sh` that reads server.pid and kills the process.
 
-## STEP 5 — Verification
+## STEP 6 — Verification
 
 Before finishing:
 1. Start server.py and verify it responds: curl http://localhost:18500/api/status
 2. Confirm that at least one of the endpoints /api/node/1/blocks returns real data
-3. If a node is not running, document in README.md how to start it:
-   bitcoind -conf=<path> -daemon
+3. If a node is not running, document in README.md how to start it
 
 ## Final deliverables (save to the project folder)
 - index.html
 - server.py
-- start.sh / stop.sh
-- README.md (usage instructions, ports, how to mine test blocks)
+- start-dashboard.sh / stop-dashboard.sh
+- README.md (step-by-step guide: install → start nodes → start dashboard → run demo → stop)
+- scripts/ (all 9 bash scripts listed above)
+- website_prompt.md (this prompt, for reproducibility)
 
 ## Technical constraints
-- server.py: Python 3 stdlib only (http.server, urllib, json, base64, threading)
+- server.py: Python 3 stdlib only (http.server, urllib, json, base64, pathlib)
 - index.html: vanilla JS + CSS, no external frameworks, no npm, no bundlers
-- Do not use localStorage for node data (use in-memory variables, refresh with polling)
-- Compatibility: macOS/Linux, python3 in PATH, bitcoin-cli in PATH or /usr/local/bin
+- All bash scripts: bash 3.2 compatible (macOS default — no declare -A associative arrays)
+- Do not use localStorage for node data (use in-memory JS variables, refresh with polling)
+- Compatibility: macOS/Linux (including WSL2), python3 in PATH, bitcoin-cli in PATH
 ```
 
 ---

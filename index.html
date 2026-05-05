@@ -559,7 +559,7 @@
   </div>
   <div class="header-right">
     <span class="pulse-dot" id="global-dot"></span>
-    <span>Actualizado: <span id="last-update">—</span></span>
+    <span>Updated: <span id="last-update">—</span></span>
   </div>
 </header>
 
@@ -575,24 +575,24 @@
   <!-- Comparison panel -->
   <div class="card comparison-card">
     <div class="card-header">
-      <div class="card-title">⚖️ Comparativa de Nodos</div>
+      <div class="card-title">⚖️ Node Comparison</div>
     </div>
     <div class="card-body" style="padding:0">
       <table class="comparison-table">
         <thead>
           <tr>
-            <th style="width:160px">Métrica</th>
+            <th style="width:160px">Metric</th>
             <th>Node 1 (node1)</th>
             <th>Node 2 (node2)</th>
           </tr>
         </thead>
         <tbody id="comparison-body">
-          <tr><td colspan="3" style="text-align:center;padding:20px;color:var(--text3)">Cargando...</td></tr>
+          <tr><td colspan="3" style="text-align:center;padding:20px;color:var(--text3)">Loading...</td></tr>
         </tbody>
       </table>
       <div style="padding:12px 16px">
         <div class="sync-banner unknown" id="sync-banner">
-          <span>⏳</span> Verificando sincronización...
+          <span>⏳</span> Checking sync status...
         </div>
       </div>
     </div>
@@ -604,11 +604,11 @@
 <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
   <div class="modal" id="modal-content">
     <div class="modal-header">
-      <span class="modal-title" id="modal-title">Bloque</span>
+      <span class="modal-title" id="modal-title">Block</span>
       <button class="modal-close" onclick="closeModalBtn()">✕</button>
     </div>
     <div class="modal-body" id="modal-body">
-      <div class="modal-spinner">Cargando bloque...</div>
+      <div class="modal-spinner">Loading block...</div>
     </div>
   </div>
 </div>
@@ -699,7 +699,7 @@ function renderNodePanel(nodeId) {
   // Balance
   const balanceHtml = s.balance !== null
     ? `<span class="balance-value">${s.balance.toFixed(8)} BTC</span>`
-    : `<span class="balance-na">wallet no cargado</span>`;
+    : `<span class="balance-na">wallet not loaded</span>`;
 
   // Blocks + pagination
   const page      = s.blockPage;
@@ -713,8 +713,8 @@ function renderNodePanel(nodeId) {
     blocksHtml = `
       <div class="offline-overlay">
         <div class="offline-icon">🔴</div>
-        <div class="offline-msg">Nodo offline — sin datos de bloques</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:6px">Verificar: bitcoind en puerto ${port}</div>
+        <div class="offline-msg">Node offline — no block data</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">Check: bitcoind on port ${port}</div>
       </div>`;
   } else if (s.blocks.length === 0) {
     blocksHtml = [...Array(5)].map(() => `<div class="skeleton"></div>`).join('');
@@ -732,19 +732,19 @@ function renderNodePanel(nodeId) {
       <table class="blocks-table">
         <thead>
           <tr>
-            <th>Altura</th>
+            <th>Height</th>
             <th>Hash</th>
-            <th>Tiempo</th>
+            <th>Time</th>
             <th style="text-align:center">Txs</th>
-            <th style="text-align:right">Tamaño</th>
+            <th style="text-align:right">Size</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
       <div class="blocks-nav">
-        <button class="nav-btn" onclick="changePage(${nodeId}, 1)" ${canGoOlder ? '' : 'disabled'}>← Anteriores</button>
+        <button class="nav-btn" onclick="changePage(${nodeId}, 1)" ${canGoOlder ? '' : 'disabled'}>← Older</button>
         <span class="nav-page">p. ${page + 1} / ${totalPages}</span>
-        <button class="nav-btn" onclick="changePage(${nodeId}, -1)" ${canGoNewer ? '' : 'disabled'}>Más recientes →</button>
+        <button class="nav-btn" onclick="changePage(${nodeId}, -1)" ${canGoNewer ? '' : 'disabled'}>Newer →</button>
       </div>`;
   }
 
@@ -753,7 +753,7 @@ function renderNodePanel(nodeId) {
       <div class="node-title">
         <div class="node-icon">⛏</div>
         <div>
-          <div class="node-name">${node.label} · ${node.name}</div>
+          <div class="node-name">${node.name}</div>
           <div class="node-port">rpc :${port}</div>
         </div>
       </div>
@@ -765,30 +765,30 @@ function renderNodePanel(nodeId) {
 
     <div class="stats-grid">
       <div class="stat-box">
-        <div class="stat-label">Altura</div>
+        <div class="stat-label">Height</div>
         <div class="stat-value orange">${height}</div>
-        <div class="stat-sub">bloques minados</div>
+        <div class="stat-sub">blocks mined</div>
       </div>
       <div class="stat-box">
         <div class="stat-label">Peers</div>
         <div class="stat-value blue">${peers}</div>
-        <div class="stat-sub">conexiones</div>
+        <div class="stat-sub">connections</div>
       </div>
       <div class="stat-box">
-        <div class="stat-label">Sesión</div>
+        <div class="stat-label">Session</div>
         <div class="stat-value green">+${s.sessionBlocks}</div>
-        <div class="stat-sub">bloques nuevos</div>
+        <div class="stat-sub">new blocks</div>
       </div>
     </div>
 
     <div class="balance-row">
-      <span class="balance-label">💰 Saldo wallet</span>
+      <span class="balance-label">💰 Wallet balance</span>
       ${balanceHtml}
     </div>
 
     <div class="mempool-row">
       <span class="mempool-label">🏊 Mempool</span>
-      <span class="mempool-count">${mempoolN} txs pendientes</span>
+      <span class="mempool-count">${mempoolN} pending txs</span>
     </div>
 
     ${bestHash ? `
@@ -798,7 +798,7 @@ function renderNodePanel(nodeId) {
     </div>` : ''}
 
     <div class="blocks-section-header">
-      <span class="section-title">📦 Bloques</span>
+      <span class="section-title">📦 Blocks</span>
       <span class="blocks-count">${s.blocks.length > 0 ? `#${s.blocks[s.blocks.length-1].height}–#${s.blocks[0].height}` : '—'}</span>
     </div>
     ${blocksHtml}
@@ -826,9 +826,9 @@ function renderComparison() {
   function mono(v) { return `<span style="font-family:var(--mono)">${v ?? '—'}</span>`; }
 
   const rows = [
-    ['Estado',          statusBadgeSmall(s1.online), statusBadgeSmall(s2.online)],
-    ['Altura',          mono(c1?.blocks),             mono(c2?.blocks)],
-    ['Dificultad',      mono(c1?.difficulty?.toFixed(4)), mono(c2?.difficulty?.toFixed(4))],
+    ['Status',          statusBadgeSmall(s1.online), statusBadgeSmall(s2.online)],
+    ['Height',          mono(c1?.blocks),             mono(c2?.blocks)],
+    ['Difficulty',      mono(c1?.difficulty?.toFixed(4)), mono(c2?.difficulty?.toFixed(4))],
     ['Mempool (txs)',   mono(m1?.size ?? 0),           mono(m2?.size ?? 0)],
     ['Peers',           mono(n1?.connections),         mono(n2?.connections)],
     ['Best Hash',       `<span style="font-family:var(--mono);font-size:10px;color:var(--blue)">${shortHash(c1?.bestblockhash)}</span>`,
@@ -857,10 +857,10 @@ function renderComparison() {
     banner.innerHTML = '<span>⏳</span> Esperando datos de ambos nodos...';
   } else if (h1 === h2) {
     banner.className = 'sync-banner synced';
-    banner.innerHTML = '<span>✅</span> Nodos sincronizados — mismo tip block';
+    banner.innerHTML = '<span>✅</span> Nodes in sync — same tip block';
   } else {
     banner.className = 'sync-banner unsynced';
-    banner.innerHTML = `<span>⚠️</span> Nodos desincronizados — tips distintos (Δ height: ${Math.abs((c1?.blocks||0)-(c2?.blocks||0))})`;
+    banner.innerHTML = `<span>⚠️</span> Nodes out of sync — different tips (Δ height: ${Math.abs((c1?.blocks||0)-(c2?.blocks||0))})`;
   }
 }
 
@@ -880,8 +880,8 @@ async function openBlock(nodeId, hash) {
   const title   = document.getElementById('modal-title');
   const body    = document.getElementById('modal-body');
 
-  title.textContent = `Bloque ${shortHash(hash)} — Nodo ${nodeId}`;
-  body.innerHTML    = '<div class="modal-spinner">⛏ Cargando bloque...</div>';
+  title.textContent = `Block ${shortHash(hash)} — Node ${nodeId}`;
+  body.innerHTML    = '<div class="modal-spinner">⛏ Loading block...</div>';
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
 
@@ -894,17 +894,17 @@ async function openBlock(nodeId, hash) {
 
   // Meta fields
   const metaFields = [
-    ['Altura',      blk.height,                             'orange'],
+    ['Height',      blk.height,                             'orange'],
     ['Hash',        blk.hash,                               ''],
-    ['Versión',     blk.version,                            ''],
-    ['Tiempo',      fmtTime(blk.time),                      ''],
+    ['Version',     blk.version,                            ''],
+    ['Time',        fmtTime(blk.time),                      ''],
     ['Nonce',       blk.nonce,                              ''],
     ['Bits',        blk.bits,                               ''],
-    ['Dificultad',  blk.difficulty?.toFixed(4),             ''],
+    ['Difficulty',  blk.difficulty?.toFixed(4),             ''],
     ['Merkle Root', shortHash(blk.merkleroot),              ''],
     ['Txs',         blk.tx?.length ?? 0,                   'orange'],
-    ['Tamaño',      fmtBytes(blk.size),                     ''],
-    ['Peso',        blk.weight ? blk.weight + ' WU' : '—', ''],
+    ['Size',        fmtBytes(blk.size),                     ''],
+    ['Weight',      blk.weight ? blk.weight + ' WU' : '—', ''],
     ['Parent',      shortHash(blk.previousblockhash),       ''],
   ];
 

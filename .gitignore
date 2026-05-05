@@ -8,3 +8,7 @@ server.log
 # Python
 __pycache__/
 *.pyc
+
+# Vim swap files
+*.swp
+*.swo

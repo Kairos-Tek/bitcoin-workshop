@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Diagnóstico rápido — ejecutar en el Mac con: python3 diagnose.py"""
+"""Quick diagnostic — run on Mac with: python3 diagnose.py"""
 import urllib.request, urllib.error, base64, json, sys
 from pathlib import Path
 
@@ -13,10 +13,10 @@ NODES = [
 def read_cookie(name):
     p = BITCOIN_DIR / name / "regtest" / ".cookie"
     print(f"  Cookie path: {p}")
-    print(f"  Existe: {p.exists()}")
+    print(f"  Exists: {p.exists()}")
     if p.exists():
         txt = p.read_text().strip()
-        print(f"  Contenido: {txt[:40]}...")
+        print(f"  Content: {txt[:40]}...")
         user, _, pwd = txt.partition(":")
         return user, pwd
     return None, None
@@ -37,7 +37,7 @@ def rpc_call(host, port, user, pwd, method):
         return None, str(e)
 
 print(f"\n{'='*60}")
-print(f"  Diagnóstico Bitcoin Regtest Dashboard")
+print(f"  Bitcoin Regtest Dashboard — Diagnostics")
 print(f"  HOME={Path.home()}")
 print(f"  BITCOIN_DIR={BITCOIN_DIR}  exists={BITCOIN_DIR.exists()}")
 print(f"{'='*60}\n")
@@ -48,10 +48,10 @@ for node in NODES:
     print(f"── {name} (rpcport={port}) ─────────────────────────────")
     user, pwd = read_cookie(name)
     if not user:
-        print("  ❌ No se pudo leer el cookie\n")
+        print("  ❌ Could not read cookie file\n")
         continue
 
-    # Probar IPv4
+    # Try IPv4 / IPv6 / hostname
     for host in ["127.0.0.1", "::1", "localhost"]:
         res, err = rpc_call(host, port, user, pwd, "getblockchaininfo")
         if res:
@@ -62,4 +62,4 @@ for node in NODES:
             print(f"  ❌ {host}:{port} → {err}")
     print()
 
-print("Diagnóstico completado.\n")
+print("Diagnostics complete.\n")

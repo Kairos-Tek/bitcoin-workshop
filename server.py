@@ -13,7 +13,7 @@ import urllib.error
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 
-# ── Configuración de nodos ────────────────────────────────────────────────────
+# ── Node configuration ────────────────────────────────────────────────────────
 
 BITCOIN_DIR = Path.home() / "bitcoin"
 
@@ -34,14 +34,14 @@ NODE_CONFIGS = [
 
 
 def read_cookie(datadir: Path) -> tuple[str, str]:
-    """Lee el fichero .cookie de regtest y devuelve (user, password)."""
+    """Reads the regtest .cookie file and returns (user, password)."""
     cookie_path = datadir / "regtest" / ".cookie"
     try:
         text = cookie_path.read_text().strip()
         user, _, password = text.partition(":")
         return user, password
     except Exception as e:
-        print(f"  [WARN] No se pudo leer {cookie_path}: {e}")
+        print(f"  [WARN] Could not read {cookie_path}: {e}")
         return "__cookie__", ""
 
 
@@ -54,7 +54,7 @@ class BitcoinRPC:
         self._refresh_auth()
 
     def _refresh_auth(self):
-        """Recarga las credenciales del cookie (se regenera al reiniciar el nodo)."""
+        """Reloads cookie credentials (regenerated on node restart)."""
         user, password = read_cookie(self.cfg["datadir"])
         creds = base64.b64encode(f"{user}:{password}".encode()).decode()
         self.headers = {
@@ -128,7 +128,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
         path = self.path.split("?")[0].rstrip("/")
         parts = [p for p in path.split("/") if p]
 
-        # ── Servir index.html en la raíz ─────────────────────────────────────
+        # ── Serve index.html at root ──────────────────────────────────────────
         if path in ("", "/", "/index.html"):
             html_path = Path(__file__).parent / "index.html"
             try:

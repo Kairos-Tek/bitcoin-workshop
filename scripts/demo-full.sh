@@ -7,7 +7,7 @@
 #   2. Connect the nodes as peers
 #   3. Mine 1 block (coinbase not yet spendable)
 #   4. Mine 100 more blocks (coinbase of block 1 now mature)
-#   5. Send 1 BTC from node1 to node2
+#   5. Send 1 BTC from node1 to node2 (broadcast only — check mempool in dashboard)
 #   6. Mine 1 block to confirm the transaction
 #   7. Show final balances on both nodes
 # ─────────────────────────────────────────────────────────────────────────────
@@ -63,20 +63,44 @@ echo "   node2: $($CLI2 getblockchaininfo 2>/dev/null | python3 -c \
   "import sys,json; d=json.load(sys.stdin); print(f\"height={d['blocks']}  tip={d['bestblockhash'][:20]}...\")" \
   2>/dev/null || echo "not yet synced — wait a few seconds")"
 
-# ── Step 6: Send 1 BTC node1 → node2 ────────────────────────────────────────
+# ── Step 6: Send 1 BTC node1 → node2 (broadcast only) ───────────────────────
 echo ""
 echo "━━━ Step 6: Send 1 BTC node1 → node2 ━━━━━━━━━━"
 bash "$SEND" 1 1 2
 
-# ── Step 7: Final balances ────────────────────────────────────────────────────
+# ── Step 7: Mine 1 block to confirm ──────────────────────────────────────────
+echo "━━━ Step 7: Mine 1 block to confirm ━━━━━━━━━━━"
+bash "$MINE" 1 1
+echo "   ✅ Transaction confirmed"
+
+# ── Step 8: Final balances ────────────────────────────────────────────────────
 echo ""
-echo "━━━ Step 7: Final balances ━━━━━━━━━━━━━━━━━━━━"
+echo "━━━ Step 8: Final balances ━━━━━━━━━━━━━━━━━━━━"
 echo "   node1 (wallet1): $($CLI1 getbalance) BTC  (50 initial − 1 sent − fee)"
 echo "   node2 (wallet2): $($CLI2 getbalance) BTC  (received)"
 
 echo ""
 echo "╔══════════════════════════════════════════════╗"
-echo "║  Demo complete! Run ./start.sh to open       ║"
-echo "║  the dashboard and explore blocks & txs.     ║"
+echo "║  Check the dashboard to verify everything    ║"
+echo "╚══════════════════════════════════════════════╝"
+echo ""
+echo "  👉 Switch to the dashboard and verify:"
+echo "     • Mempool is now empty (0 pending transactions)"
+echo "     • Both nodes show the same height (102 blocks)"
+echo "     • A new block appears at the top of the block list"
+echo "       on both node1 and node2 (they are in sync)"
+echo "     • Click that block — it contains 2 transactions:"
+echo "       1. Coinbase (block reward to the miner)"
+echo "       2. The 1 BTC payment from node1 to node2"
+echo "     • Wallet balances have updated:"
+echo "       — node1: ~49 BTC (50 − 1 sent − small fee)"
+echo "       — node2:  1 BTC (received)"
+echo "     • Comparison panel (bottom): nodes are IN SYNC"
+echo "       — same height, same tip hash"
+echo "       — sync indicator is green"
+echo ""
+echo "╔══════════════════════════════════════════════╗"
+echo "║  Demo complete! Run ./start-dashboard.sh to  ║"
+echo "║  open the dashboard and explore blocks & txs ║"
 echo "╚══════════════════════════════════════════════╝"
 echo ""
