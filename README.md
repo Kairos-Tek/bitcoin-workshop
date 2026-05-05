@@ -36,8 +36,9 @@ bitcoin-dashboard/
     ├── stop-nodes.sh      ← Stop both bitcoind processes
     ├── connect-nodes.sh   ← Connect node1 ↔ node2 as peers
     ├── demo-standalone.sh   ← Standalone demo: node1 mines independently (nodes isolated)
-    ├── demo.sh              ← Full demo: wallets, mining, transaction (nodes connected)
-    └── send_transaction.sh  ← Send N BTC between nodes and confirm in one block
+    ├── demo-full.sh         ← Full demo: wallets, mining, transaction (nodes connected)
+    ├── send-transaction.sh  ← Send N BTC between nodes and confirm in one block
+    └── mine-blocks.sh       ← Mine N blocks on a given node
 ```
 
 ```
@@ -97,71 +98,11 @@ This starts two `bitcoind` processes in regtest mode, each with its own data dir
 | node1 | 1234     | 1234     | `~/bitcoin/node1`     |
 | node2 | 2345     | 2345     | `~/bitcoin/node2`     |
 
-You can verify the nodes are running with:
-```bash
-bitcoin-cli -regtest -datadir="$HOME/bitcoin/node1" -rpcport=1234 getblockchaininfo
-bitcoin-cli -regtest -datadir="$HOME/bitcoin/node2" -rpcport=2345 getblockchaininfo
-```
-
-Both should show `"chain": "regtest"` and `"blocks": 0`.
-
 > **Tip:** Open two extra terminal tabs running `tail -f ~/bitcoin/node1/regtest/debug.log` and `tail -f ~/bitcoin/node2/regtest/debug.log` to see live node activity throughout the exercise.
 
 ---
 
-### Step 3 — Run the demo
-
-Two modes are available depending on what you want to demonstrate.
-
-#### Option A — Standalone demo (nodes isolated)
-
-Runs the full exercise on **node1 only**, without connecting the nodes as peers. Node2 stays at block height 0 and is unaware of any transactions — even if node1 sends BTC to a node2 address.
-
-```bash
-chmod +x scripts/demo-standalone.sh
-./scripts/demo-standalone.sh
-```
-
-Start the dashboard and compare the two panels side by side: node1 will show 102 blocks and a balance of ~49 BTC, while node2 shows height 0 and 0 BTC — even though node1 already sent it 1 BTC.
-
-Now connect the nodes:
-
-```bash
-./scripts/connect-nodes.sh
-```
-
-Watch node2 in the dashboard: it will detect the longer chain on node1 and sync automatically, jumping from height 0 to 102 and showing its 1 BTC balance. This illustrates the core principle of Bitcoin's peer-to-peer consensus — **nodes always adopt the longest valid chain**.
-
-#### Option B — Full demo (nodes connected from the start)
-
-Runs the complete exercise with both nodes connected as peers from the beginning. Blocks and transactions propagate in real time as they are mined.
-
-```bash
-chmod +x scripts/demo.sh
-./scripts/demo.sh
-```
-
----
-
-### Step 3b — Send a transaction manually
-
-Once the nodes have funds (after running either demo), you can send transactions between them at any time using `send_transaction.sh`:
-
-```bash
-chmod +x scripts/send_transaction.sh
-
-# Send 1 BTC from node1 to node2
-./scripts/send_transaction.sh 1 1 2
-
-# Send 0.5 BTC from node2 to node1
-./scripts/send_transaction.sh 0.5 2 1
-```
-
-The script validates that both nodes are online and that the source wallet has sufficient balance, then broadcasts the transaction and mines one block to confirm it. The dashboard updates automatically.
-
----
-
-### Step 4 — Start the dashboard
+### Step 3 — Start the dashboard
 
 ```bash
 chmod +x start.sh stop.sh
@@ -170,15 +111,100 @@ chmod +x start.sh stop.sh
 
 This starts `server.py` on port 18500 and opens `http://localhost:18500` in your browser.
 
-![Dashboard](<images/bitcoin-dashboard 1.png>)
-
-Both nodes online at block height 182, 1 peer each, with the last 20 blocks listed per node.
-
-![Block detail](<images/bitcoin-dashboard 2.png>)
-
-Block #102 showing two transactions: the **coinbase** (50.00003525 BTC mined reward) and the **1 BTC payment** sent to node2's wallet, with 48.99996475 BTC returned as change.
+**Check the initial state in the dashboard:** both nodes should appear online with height 0, 0 peers, mempool empty and wallet balance at 0 BTC. This is the starting point — a clean private blockchain with no activity yet.
 
 > **Want to generate this dashboard with AI?** See [`website_prompt.md`](website_prompt.md) for the full prompt used to build it with Claude.
+
+---
+
+### Step 4 — Run the demo
+
+Two modes are available depending on what you want to demonstrate.
+
+#### Option A — Standalone demo (nodes isolated)
+
+Runs the full exercise on **node1 only**, without connecting the nodes as peers first.
+
+```bash
+chmod +x scripts/demo-standalone.sh
+./scripts/demo-standalone.sh
+```
+
+Once the script finishes, switch to the dashboard and explore:
+
+**Block list:** node1 shows 102 blocks, node2 shows height 0. Use the pagination buttons to scroll back through node1's blocks. Find the last block (height 102) — it contains **2 transactions**: click on it to expand and identify the **coinbase** (the mining reward automatically created in every block) and the **payment transaction** (1 BTC sent to node2's address). Inspect the inputs and outputs of each.
+
+**Wallet balance:** node1 shows ~49 BTC (50 initial − 1 sent − fee). Node2 shows 0 BTC — even though node1 sent it 1 BTC. This is because the two nodes are running completely separate blockchains: node2 has never seen that transaction. They are not yet connected as peers.
+
+**Comparison panel:** the sync indicator will show the nodes as out of sync, with different tip block hashes and different heights.
+
+Now connect the nodes:
+
+```bash
+./scripts/connect-nodes.sh
+```
+
+Watch the dashboard: once connected, node2 detects that node1 has a longer valid chain and syncs automatically — its height will jump from 0 to 102 and its wallet balance will update to 1 BTC. The comparison panel will turn green once both nodes share the same tip block hash. This illustrates the core principle of Bitcoin's peer-to-peer consensus — **nodes always adopt the longest valid chain**.
+
+![Dashboard](<images/bitcoin-dashboard 1.png>)
+
+#### Option B — Full demo (nodes connected from the start)
+
+Runs the complete exercise with both nodes connected as peers from the beginning. Blocks and transactions propagate in real time as they are mined.
+
+```bash
+chmod +x scripts/demo-full.sh
+./scripts/demo-full.sh
+```
+
+Once the script finishes, switch to the dashboard and explore:
+
+**Comparison panel:** both nodes show the same height and the same tip block hash — the sync indicator is green. This is the expected state when nodes are connected: every mined block propagates to all peers immediately.
+
+**Block list:** find the last block (height 102) — it contains **2 transactions**. Click on it to expand and identify the **coinbase** (the mining reward) and the **payment transaction** (1 BTC sent to node2). Check the outputs of the payment transaction: one output sends 1 BTC to node2's address, and another returns the change (~49 BTC) back to node1.
+
+**Wallet balance:** node1 shows ~49 BTC, node2 shows 1 BTC — both reflecting the confirmed transaction.
+
+---
+
+### Step 4b — Send a transaction manually
+
+Once the nodes have funds (after running either demo), you can send transactions between them at any time:
+
+```bash
+chmod +x scripts/send-transaction.sh
+
+# Send 1 BTC from node1 to node2
+./scripts/send-transaction.sh 1 1 2
+
+# Send 0.5 BTC from node2 to node1
+./scripts/send-transaction.sh 0.5 2 1
+```
+
+After the transaction is broadcast (before the confirmation block is mined), check the dashboard: the **mempool counter** will show 1 pending transaction and the **wallet balances** will still reflect the previous state — the transaction exists but has not yet been included in a block.
+
+The script then mines 1 block to confirm the transaction. Switch back to the dashboard and verify:
+
+- The **mempool** is now empty.
+- A **new block** has appeared at the top of node1's block list containing 2 transactions: the coinbase and the confirmed payment. Click on it to inspect both.
+- The **wallet balances** have updated: the sender's balance has decreased by the sent amount plus the fee, and the receiver's balance has increased accordingly.
+
+---
+
+### Step 4c — Mine blocks manually
+
+Mine a specific number of blocks on any node at any time:
+
+```bash
+chmod +x scripts/mine-blocks.sh
+
+# Mine 1 block on node1
+./scripts/mine-blocks.sh 1 1
+
+# Mine 100 blocks on node2
+./scripts/mine-blocks.sh 100 2
+```
+
 
 ---
 

@@ -625,8 +625,8 @@ const NODES = [
 
 // State
 const state = {
-  1: { info: null, blocks: [], online: null, mempoolCount: 0, sessionBlocks: 0, initialHeight: null, balance: null, blockPage: 0, tipHeight: null },
-  2: { info: null, blocks: [], online: null, mempoolCount: 0, sessionBlocks: 0, initialHeight: null, balance: null, blockPage: 0, tipHeight: null },
+  1: { info: null, blocks: [], online: null, mempoolCount: 0, sessionBlocks: 0, initialHeight: null, balance: null, address: null, blockPage: 0, tipHeight: null },
+  2: { info: null, blocks: [], online: null, mempoolCount: 0, sessionBlocks: 0, initialHeight: null, balance: null, address: null, blockPage: 0, tipHeight: null },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1029,8 +1029,9 @@ async function pollBlocks(nodeId) {
 async function pollBalance(nodeId) {
   if (!state[nodeId].online) return;
   const data = await apiFetch(`/api/node/${nodeId}/balance`);
-  if (!data.error && data.balance !== null && data.balance !== undefined) {
-    state[nodeId].balance = data.balance;
+  if (!data.error) {
+    if (data.balance !== null && data.balance !== undefined) state[nodeId].balance = data.balance;
+    if (data.address) state[nodeId].address = data.address;
     renderNodePanel(nodeId);
   }
 }

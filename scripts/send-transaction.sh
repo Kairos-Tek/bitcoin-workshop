@@ -3,11 +3,11 @@
 # Bitcoin Regtest Dashboard — Send transaction between nodes
 #
 # Usage:
-#   ./scripts/send_transaction.sh <amount_btc> <source_node> <dest_node>
+#   ./scripts/send-transaction.sh <amount_btc> <source_node> <dest_node>
 #
 # Examples:
-#   ./scripts/send_transaction.sh 1 1 2    # Send 1 BTC from node1 to node2
-#   ./scripts/send_transaction.sh 0.5 2 1  # Send 0.5 BTC from node2 to node1
+#   ./scripts/send-transaction.sh 1 1 2    # Send 1 BTC from node1 to node2
+#   ./scripts/send-transaction.sh 0.5 2 1  # Send 0.5 BTC from node2 to node1
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -e
@@ -62,6 +62,7 @@ fi
 
 CLI_SRC="bitcoin-cli -regtest -datadir=${DATADIR_SRC} -rpcport=${PORT_SRC}"
 CLI_DST="bitcoin-cli -regtest -datadir=${DATADIR_DST} -rpcport=${PORT_DST}"
+MINE="$(dirname "$0")/mine-blocks.sh"
 
 echo ""
 echo "╔══════════════════════════════════════════════╗"
@@ -123,14 +124,17 @@ TXID=$($CLI_SRC -named sendtoaddress address="$DST_ADDR" amount="$AMOUNT" fee_ra
 echo "   ✅ Transaction broadcast!"
 echo "   txid: ${TXID}"
 echo ""
-echo "   node${DST} balance before confirmation (should be unchanged):"
+echo "   node${DST} balance (should be unchanged — tx is in the mempool):"
 echo "   $($CLI_DST getbalance 2>/dev/null || echo '0') BTC"
+echo ""
+echo "   👉 Open the dashboard to see the transaction waiting in the mempool."
+echo "      Run ./start.sh if the dashboard is not already open."
 
 # ── Mine a block to confirm ───────────────────────────────────────────────────
 echo ""
 echo "━━━ Mining 1 block to confirm ━━━━━━━━━━━━━━━━━"
-$CLI_SRC -generate 1 > /dev/null
-echo "   ✅ Block mined — transaction confirmed"
+bash "$MINE" 1 "$SRC"
+echo "   ✅ Transaction confirmed"
 
 # ── Final balances ────────────────────────────────────────────────────────────
 echo ""

@@ -14,6 +14,8 @@
 
 CLI1="bitcoin-cli -regtest -datadir=$HOME/bitcoin/node1 -rpcport=1234"
 CLI2="bitcoin-cli -regtest -datadir=$HOME/bitcoin/node2 -rpcport=2345"
+MINE="$(dirname "$0")/mine-blocks.sh"
+SEND="$(dirname "$0")/send-transaction.sh"
 
 echo ""
 echo "╔══════════════════════════════════════════════╗"
@@ -41,17 +43,14 @@ sleep 2
 # ── Step 3: Mine 1 block ──────────────────────────────────────────────────────
 echo ""
 echo "━━━ Step 3: Mine 1 block on node1 ━━━━━━━━━━━━━"
-$CLI1 -generate 1
-echo ""
+bash "$MINE" 1 1
 echo "   Balance node1 (should be 0 — coinbase needs 100 confirmations):"
 echo "   $($CLI1 getbalance) BTC"
 
 # ── Step 4: Mine 100 more blocks ──────────────────────────────────────────────
 echo ""
 echo "━━━ Step 4: Mine 100 more blocks ━━━━━━━━━━━━━━"
-$CLI1 -generate 100 > /dev/null
-echo "   ✅ 100 blocks mined"
-echo ""
+bash "$MINE" 100 1
 echo "   Balance node1 (block 1 now has 100+ confirmations → 50 BTC):"
 echo "   $($CLI1 getbalance) BTC"
 
@@ -64,32 +63,14 @@ echo "   node2: $($CLI2 getblockchaininfo 2>/dev/null | python3 -c \
   "import sys,json; d=json.load(sys.stdin); print(f\"height={d['blocks']}  tip={d['bestblockhash'][:20]}...\")" \
   2>/dev/null || echo "not yet synced — wait a few seconds")"
 
-# ── Step 6: Get node2 address ─────────────────────────────────────────────────
+# ── Step 6: Send 1 BTC node1 → node2 ────────────────────────────────────────
 echo ""
-echo "━━━ Step 6: Get node2 receiving address ━━━━━━━━"
-$CLI2 loadwallet "wallet2" 2>/dev/null || true
-NODE2_ADDR=$($CLI2 getnewaddress "wallet2")
-echo "   node2 address: $NODE2_ADDR"
+echo "━━━ Step 6: Send 1 BTC node1 → node2 ━━━━━━━━━━"
+bash "$SEND" 1 1 2
 
-# ── Step 7: Send 1 BTC ───────────────────────────────────────────────────────
+# ── Step 7: Final balances ────────────────────────────────────────────────────
 echo ""
-echo "━━━ Step 7: Send 1 BTC node1 → node2 ━━━━━━━━━━"
-TXID=$($CLI1 -named sendtoaddress address="$NODE2_ADDR" amount=1 fee_rate=25)
-echo "   ✅ Transaction sent!"
-echo "   txid: $TXID"
-echo ""
-echo "   Balance node2 before confirmation (should be 0):"
-echo "   $($CLI2 getbalance) BTC"
-
-# ── Step 8: Mine 1 block to confirm ──────────────────────────────────────────
-echo ""
-echo "━━━ Step 8: Mine 1 block to confirm tx ━━━━━━━━━"
-$CLI1 -generate 1 > /dev/null
-echo "   ✅ Block mined — transaction confirmed"
-
-# ── Step 9: Final balances ────────────────────────────────────────────────────
-echo ""
-echo "━━━ Step 9: Final balances ━━━━━━━━━━━━━━━━━━━━"
+echo "━━━ Step 7: Final balances ━━━━━━━━━━━━━━━━━━━━"
 echo "   node1 (wallet1): $($CLI1 getbalance) BTC  (50 initial − 1 sent − fee)"
 echo "   node2 (wallet2): $($CLI2 getbalance) BTC  (received)"
 

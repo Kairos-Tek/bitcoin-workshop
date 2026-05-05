@@ -243,8 +243,18 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     if not werr and wallets:
                         rpc.call("loadwallet", [wallets[0]])
                         balance, err = rpc.call("getbalance")
+
+                # Get a stable wallet address (prefer existing ones)
+                address = None
+                addr_list, _ = rpc.call("listreceivedbyaddress", [0, True])
+                if addr_list:
+                    address = addr_list[0]["address"]
+                else:
+                    address, _ = rpc.call("getnewaddress", [])
+
                 self.send_json({
                     "balance": balance,
+                    "address": address,
                     "error":   str(err) if err else None,
                 })
                 return
