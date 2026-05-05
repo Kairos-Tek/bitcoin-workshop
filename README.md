@@ -244,7 +244,7 @@ The modal shows all block header fields and both transactions: the **coinbase** 
 
 Once the nodes have funds (after running either demo), you can send transactions between them at any time.
 
-**Phase 1 — Broadcast the transaction**
+**Phase 1 — Broadcast one or more transactions**
 
 ```bash
 # Send 1 BTC from node1 to node2
@@ -256,24 +256,30 @@ Once the nodes have funds (after running either demo), you can send transactions
 
 The script broadcasts the transaction and then **pauses**, waiting for you to press Enter. While it waits, switch to the dashboard and check:
 
-- The **mempool counter** shows 1 pending transaction.
+- The **mempool counter** shows the pending transaction.
 - The **wallet balances** have not changed yet — the transaction exists in the mempool but has not been included in any block.
 
-This is the unconfirmed state: the transaction is known to the network but not yet final. When you are done exploring, press Enter in the terminal. The script will print instructions for the next step and exit.
+This is the unconfirmed state: the transaction is known to the network but not yet final.
 
-**Phase 2 — Mine a block to confirm**
+You can **send multiple transactions before mining** — run the script again with a different amount or direction and watch the mempool counter grow. Each transaction will appear in the mempool independently, and all of them will be picked up in the next block you mine.
+
+When you are done exploring, press Enter in the terminal. The script will remind you how to mine and exit.
+
+**Phase 2 — Mine a block whenever you are ready**
 
 ```bash
 ./scripts/mine-blocks.sh 1 1
 ```
 
+You decide when to mine. There is no rush — the transactions will wait in the mempool until a block is produced.
+
 **Phase 3 — Verify in the dashboard**
 
 Switch back to the dashboard and check:
 
-- The **mempool** is now empty — the pending transaction has been picked up by the miner.
-- A **new block** has appeared at the top of node1's block list. Click on it to expand: it contains 2 transactions — the coinbase (mining reward) and the confirmed payment. Inspect the inputs and outputs of each.
-- The **wallet balances** have updated: the sender's balance decreased by the sent amount plus the fee, and the receiver's balance increased accordingly.
+- The **mempool** is now empty — all pending transactions have been picked up by the miner.
+- A **new block** has appeared at the top of node1's block list. Click on it to expand: it contains the coinbase (mining reward) plus one entry per confirmed transaction. Inspect the inputs and outputs of each.
+- The **wallet balances** have updated to reflect all confirmed transactions.
 
 ---
 
