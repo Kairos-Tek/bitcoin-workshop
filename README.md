@@ -825,4 +825,8 @@ No npm, no pip installs, no bundlers — just `python3` and a browser.
 
 ## License
 
-[MIT License](https://en.wikipedia.org/wiki/MIT_License) — Copyright © 2026 Jorge Ordovás ([@joobid](https://github.com/joobid) on GitHub · [@joobid](https://x.com/joobid) on X)
+Copyright © 2026 [Kairos Tek](https://kairos-tek.com) · All rights reserved.
+
+This work is licensed under [Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)](https://creativecommons.org/licenses/by-nc-nd/4.0/).
+
+You are free to view and share this material with attribution. You may **not** use it for commercial purposes, modify it, or build derivative works from it.
