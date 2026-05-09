@@ -69,12 +69,11 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
 .slide{
   position:absolute;inset:0;display:flex;flex-direction:column;
   align-items:center;justify-content:center;
-  padding:52px 80px 72px;
+  padding:28px 52px 52px;
   opacity:0;pointer-events:none;transition:opacity .22s ease;
 }
 .slide.active{opacity:1;pointer-events:auto}
-
-/* Nav bar */
+.slide.centered{justify-content:center}
 #nav{
   position:fixed;bottom:0;left:0;right:0;height:46px;
   background:var(--surf);border-top:1px solid var(--border);
@@ -101,9 +100,9 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
 
 /* ─── TYPE SYSTEM ───────────────────────────────────────────────── */
 .tag{font-size:clamp(13px,1.1vw,17px);font-weight:700;letter-spacing:.16em;text-transform:uppercase;
-  color:var(--blue);margin-bottom:14px;align-self:flex-start}
-.title{font-size:clamp(26px,3.6vw,46px);font-weight:800;color:var(--light);
-  line-height:1.1;margin-bottom:20px}
+  color:var(--blue);position:absolute;top:28px;left:52px}
+.title{font-size:clamp(28px,4.2vw,58px);font-weight:800;color:var(--light);
+  line-height:1.1;margin-bottom:16px}
 .lead{font-size:clamp(13px,1.3vw,16px);color:var(--muted);line-height:1.65}
 .title-xl{font-size:clamp(32px,5.5vw,68px);font-weight:900;color:var(--light);line-height:1.0}
 .blue{color:var(--blue)}
@@ -113,6 +112,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
   background:#0a1520;border-left:3px solid var(--blue);
   padding:14px 18px;font-family:var(--mono);font-size:12.5px;
   color:var(--light);line-height:1.75;position:relative;width:100%;
+  white-space:pre-wrap;overflow-wrap:anywhere;overflow-x:auto;
 }
 .code+.code{margin-top:6px}
 .code .cm{color:#4a6a8a}
@@ -124,7 +124,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
 .cbtn:hover{border-color:var(--blue);color:var(--blue)}
 
 /* ─── CONCEPT CARDS ─────────────────────────────────────────────── */
-.cards4{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;max-width:820px}
+.cards4{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;max-width:960px}
 .ccard{background:var(--surf);border:1px solid var(--border);padding:22px;
   transition:border-color .2s}
 .ccard:hover{border-color:var(--blue)}
@@ -147,7 +147,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
 
 /* ─── STEPS ─────────────────────────────────────────────────────── */
 .steps3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;
-  width:100%;max-width:960px}
+  width:100%;max-width:1100px}
 .scard{background:var(--surf);border:1px solid var(--border);padding:22px;
   display:flex;flex-direction:column;gap:8px}
 .snum{font-size:44px;font-weight:900;color:var(--blue);opacity:.28;
@@ -157,10 +157,10 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
 
 /* ─── IMAGE SLIDES ──────────────────────────────────────────────── */
 .img-split{display:grid;grid-template-columns:1fr 1.7fr;gap:44px;
-  align-items:center;width:100%;max-width:1100px}
-.img-text{display:flex;flex-direction:column;gap:12px}
-.img-box{border:1px solid var(--border);overflow:hidden;background:var(--surf2)}
-.img-box img{width:100%;display:block}
+  align-items:start;width:100%}
+.img-text{display:flex;flex-direction:column;gap:12px;justify-content:center}
+.img-box{border:1px solid var(--border);overflow:hidden;background:var(--surf2);display:flex;align-items:flex-start}
+.img-box img{width:100%;height:auto;max-height:calc(100vh - 360px);display:block}
 .obs{
   display:flex;gap:11px;align-items:flex-start;padding:11px 15px;
   background:var(--surf);border-left:3px solid var(--border);
@@ -173,7 +173,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
 .obs-i{font-size:15px;flex-shrink:0;margin-top:1px}
 
 /* ─── ARCHITECTURE DIAGRAM ──────────────────────────────────────── */
-.arch-row{display:flex;align-items:center;gap:14px;max-width:900px;
+.arch-row{display:flex;align-items:center;gap:14px;max-width:1040px;
   width:100%;margin-bottom:28px}
 .abox{background:var(--surf);border:1px solid var(--border);padding:18px 22px;
   text-align:center;flex:1}
@@ -191,7 +191,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
 
 /* ─── CONSENSUS SLIDE ───────────────────────────────────────────── */
 .cons-split{display:grid;grid-template-columns:1fr 1.4fr;gap:48px;
-  align-items:center;width:100%;max-width:1100px}
+  align-items:center;width:100%;max-width:1240px}
 .cons-text{display:flex;flex-direction:column;gap:22px}
 .cons-q{font-size:clamp(18px,2.4vw,28px);font-weight:800;color:var(--light);line-height:1.2}
 .cons-a{font-size:clamp(12px,1.3vw,15px);color:var(--muted);line-height:1.65}
@@ -204,21 +204,21 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
 .cons-cmd{margin-top:4px}
 
 /* ─── BLOCK ANATOMY ─────────────────────────────────────────────── */
-.block-split{display:grid;grid-template-columns:1fr 1.6fr;gap:44px;
-  align-items:center;width:100%;max-width:1100px}
-.bfield{display:flex;gap:11px;align-items:flex-start;padding:9px 13px;
-  border:1px solid var(--border);background:var(--surf);font-size:11.5px}
-.bfield-k{font-family:var(--mono);color:var(--blue);font-size:10.5px;
-  min-width:90px;font-weight:700;padding-top:1px}
-.bfield-v{color:var(--muted);line-height:1.45}
-.btx{background:var(--surf2);border:1px solid var(--border);padding:12px 15px;
-  margin-top:8px}
-.btx-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--blue);margin-bottom:6px}
-.btx-desc{font-size:12px;color:var(--muted);line-height:1.55}
+.block-split{display:grid;grid-template-columns:1fr 1.6fr;gap:40px;
+  align-items:start;width:100%}
+.bfield{display:flex;gap:9px;align-items:flex-start;padding:7px 11px;
+  border:1px solid var(--border);background:var(--surf);font-size:10.5px}
+.bfield-k{font-family:var(--mono);color:var(--blue);font-size:9.5px;
+  min-width:82px;font-weight:700;padding-top:1px}
+.bfield-v{color:var(--muted);line-height:1.4}
+.btx{background:var(--surf2);border:1px solid var(--border);padding:10px 13px;
+  margin-top:6px}
+.btx-label{font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--blue);margin-bottom:5px}
+.btx-desc{font-size:11.5px;color:var(--muted);line-height:1.5}
 
 /* ─── COMMANDS SLIDE ────────────────────────────────────────────── */
-.cmds{display:flex;flex-direction:column;gap:10px;width:100%;max-width:740px}
+.cmds{display:flex;flex-direction:column;gap:10px;width:100%;max-width:880px}
 .cmd{background:var(--surf);border:1px solid var(--border);padding:15px 18px}
 .cmd-script{font-family:var(--mono);font-size:12.5px;color:var(--blue);margin-bottom:4px}
 .cmd-desc{font-size:12px;color:var(--muted)}
@@ -230,7 +230,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
 
 /* ─── SUMMARY SLIDE ─────────────────────────────────────────────── */
 .sum-wrap{display:grid;grid-template-columns:1fr 260px;gap:56px;
-  align-items:center;width:100%;max-width:1000px}
+  align-items:center;width:100%;max-width:1180px}
 .takeaways{display:flex;flex-direction:column;gap:10px}
 .take{
   display:flex;gap:14px;align-items:flex-start;padding:12px 18px;
@@ -249,7 +249,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
 
 /* ─── DEMO TIMELINE (Mode B) ────────────────────────────────────── */
 .tl3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;
-  width:100%;max-width:1040px}
+  width:100%;max-width:1180px}
 .tlcard{background:var(--surf);border:1px solid var(--border);
   overflow:hidden;display:flex;flex-direction:column}
 .tlcard-head{
@@ -316,7 +316,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
 
 /* ─── ABOUT SLIDE ───────────────────────────────────────────────── */
 .about-wrap{display:grid;grid-template-columns:1fr 1fr;gap:48px;
-  align-items:start;width:100%;max-width:1100px}
+  align-items:center;width:100%;max-width:1100px}
 .about-left{display:flex;flex-direction:column;gap:16px}
 .about-desc{font-size:13px;color:var(--muted);line-height:1.75}
 .about-topics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
@@ -376,6 +376,22 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
 .port-grid{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
 .port-tag{font-family:var(--mono);font-size:11px;color:var(--blue);
   background:#0a1520;border:1px solid var(--border);padding:3px 10px}
+
+/* ─── FIX 8 · GRID DECORATIVO EN WELCOME SLIDE ─────────────────── */
+#s01{
+  background-image:radial-gradient(rgba(59,117,244,.10) 1px, transparent 1px);
+  background-size:32px 32px;
+}
+
+/* ─── FIX 9 · NAV LOGO RESPONSIVE ──────────────────────────────── */
+@media (max-width:900px){
+  #nav-logo{display:none}
+}
+
+/* ─── FIX 10 · MODE SELECTOR — BLOQUES TETRIS DECORATIVOS ──────── */
+.ms-card-blocks{display:flex;gap:3px;align-items:flex-end;margin-bottom:4px}
+.mb{background:var(--blue);flex-shrink:0}
+.ms-card.b .mb{background:var(--surf3);border:1px solid var(--blue)}
 </style>
 </head>
 <body>
@@ -394,6 +410,13 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
 
   <div class="ms-cards">
     <div class="ms-card" onclick="startPresentation('a')">
+      <div class="ms-card-blocks">
+        <div class="mb" style="width:8px;height:16px"></div>
+        <div class="mb" style="width:8px;height:24px"></div>
+        <div class="mb" style="width:8px;height:12px"></div>
+        <div class="mb" style="width:8px;height:20px"></div>
+        <div class="mb" style="width:8px;height:8px"></div>
+      </div>
       <div class="ms-card-tag">Option A</div>
       <h3 class="t" data-en="Step by step" data-es="Paso a paso">Step by step</h3>
       <p class="t"
@@ -405,6 +428,11 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
     </div>
 
     <div class="ms-card b" onclick="startPresentation('b')">
+      <div class="ms-card-blocks">
+        <div class="mb" style="width:8px;height:20px"></div>
+        <div class="mb" style="width:8px;height:20px"></div>
+        <div class="mb" style="width:8px;height:20px"></div>
+      </div>
       <div class="ms-card-tag">Option B</div>
       <h3 class="t" data-en="Overview" data-es="Visión de conjunto">Overview</h3>
       <p class="t"
@@ -432,8 +460,11 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
   <div id="swrap">
 
     <!-- ─── SLIDE 01: WELCOME ─────────────────────────────────── -->
-    <div class="slide" id="s01">
+    <div class="slide centered" id="s01">
       <div class="welcome">
+        <div class="w-logo">
+          <img class="kt-logo" src="logos/logotipo-white.svg" alt="Kairos Tek" style="height:60px;width:auto">
+        </div>
         <h1 class="w-title t" data-en="Bitcoin Regtest<br>Workshop" data-es="Taller Práctico<br>Bitcoin Regtest">Bitcoin Regtest<br>Workshop</h1>
         <p class="w-sub t"
            data-en="Bitcoin Regtest Workshop &nbsp;·&nbsp; Kairos Tek"
@@ -446,7 +477,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
     </div>
 
     <!-- ─── SLIDE 02: WHAT ARE WE BUILDING ───────────────────── -->
-    <div class="slide" id="s02">
+    <div class="slide centered" id="s02">
       <p class="tag t" data-en="Overview" data-es="Visión general">Overview</p>
       <h2 class="title t" data-en="What are we building?" data-es="¿Qué vamos a construir?">What are we building?</h2>
 
@@ -480,7 +511,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
          data-es="<b>Dos nodos Bitcoin.</b> Una blockchain local y privada. Un dashboard en vivo.">
         <b>Two Bitcoin nodes.</b> A local private blockchain. A live dashboard.
       </p>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;max-width:820px;width:100%;margin-top:20px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;max-width:1040px;width:100%;margin-top:20px">
         <div style="background:var(--surf);border:1px solid var(--border);padding:14px 16px">
           <div style="font-size:9px;font-weight:700;letter-spacing:.18em;color:var(--blue);margin-bottom:6px">NODE 1</div>
           <div style="font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.7">
@@ -517,12 +548,12 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
     </div>
 
     <!-- ─── SLIDE 03: KEY CONCEPTS ────────────────────────────── -->
-    <div class="slide" id="s03">
+    <div class="slide centered" id="s03">
       <p class="tag t" data-en="Theory" data-es="Teoría">Theory</p>
       <h2 class="title t" data-en="Key concepts" data-es="Conceptos clave">Key concepts</h2>
       <div class="cards4">
         <div class="ccard">
-          <div class="ccard-icon">₿</div>
+          <div class="ccard-icon"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="8" height="8" fill="#3b75f4"/><rect x="14" y="4" width="8" height="8" fill="#3b75f4"/><rect x="4" y="14" width="8" height="8" fill="#3b75f4"/><rect x="14" y="14" width="8" height="8" fill="#2b4bc2"/><rect x="24" y="14" width="4" height="4" fill="#3b75f4"/><rect x="24" y="20" width="4" height="4" fill="#3b75f4"/></svg></div>
           <div class="ccard-term">Regtest</div>
           <div class="ccard-def t"
             data-en="A private local blockchain that only exists on your machine. No real Bitcoin, no internet — just a controlled sandbox for learning and development."
@@ -531,7 +562,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
           </div>
         </div>
         <div class="ccard">
-          <div class="ccard-icon">🖥</div>
+          <div class="ccard-icon"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="6" width="24" height="16" fill="none" stroke="#3b75f4" stroke-width="2"/><rect x="8" y="10" width="6" height="4" fill="#3b75f4"/><rect x="18" y="10" width="2" height="2" fill="#3b75f4"/><rect x="22" y="10" width="2" height="2" fill="#3b75f4"/><rect x="12" y="24" width="8" height="2" fill="#3b75f4"/><rect x="8" y="26" width="16" height="2" fill="#2b4bc2"/></svg></div>
           <div class="ccard-term t" data-en="Node" data-es="Nodo">Node</div>
           <div class="ccard-def t"
             data-en="A program (bitcoind) that holds a complete copy of the blockchain. Your two nodes are like two banks that each keep their own independent ledger."
@@ -540,7 +571,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
           </div>
         </div>
         <div class="ccard">
-          <div class="ccard-icon">⏳</div>
+          <div class="ccard-icon"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="4" width="20" height="4" fill="#3b75f4"/><rect x="6" y="24" width="20" height="4" fill="#3b75f4"/><rect x="10" y="10" width="4" height="4" fill="#3b75f4"/><rect x="18" y="10" width="4" height="4" fill="#3b75f4"/><rect x="14" y="16" width="4" height="4" fill="#2b4bc2"/></svg></div>
           <div class="ccard-term">Mempool</div>
           <div class="ccard-def t"
             data-en="The waiting room for unconfirmed transactions. A transaction lives here until a miner includes it in a block. Nothing is final until then."
@@ -549,7 +580,7 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
           </div>
         </div>
         <div class="ccard">
-          <div class="ccard-icon">🔗</div>
+          <div class="ccard-icon"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="12" width="8" height="8" fill="#3b75f4"/><rect x="12" y="14" width="8" height="4" fill="#2b4bc2"/><rect x="20" y="12" width="8" height="8" fill="#3b75f4"/><rect x="8" y="4" width="4" height="8" fill="#3b75f4"/><rect x="20" y="4" width="4" height="8" fill="#3b75f4"/><rect x="14" y="2" width="4" height="4" fill="#ebefff"/></svg></div>
           <div class="ccard-term t" data-en="Consensus" data-es="Consenso">Consensus</div>
           <div class="ccard-def t"
             data-en="Bitcoin's core rule: every node always adopts the longest valid chain. This is how decentralized agreement works — no authority needed, no vote required."
@@ -561,10 +592,11 @@ html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
     </div>
 
     <!-- ─── SLIDE 04: PREREQUISITES ───────────────────────────── -->
-    <div class="slide" id="s04">
+    <div class="slide centered" id="s04">
       <p class="tag t" data-en="Before we start" data-es="Antes de empezar">Before we start</p>
       <h2 class="title t" data-en="Prerequisites" data-es="Prerrequisitos">Prerequisites</h2>
-      <div style="width:100%;max-width:800px">
+      <div class="inner">
+      <div style="width:100%;max-width:1100px">
         <div class="os-tabs">
           <button class="otab on" onclick="showOS('win',this)">🪟 Windows</button>
           <button class="otab" onclick="showOS('mac',this)">🍎 macOS</button>
@@ -625,10 +657,11 @@ sudo apt install -y wslu</div>
 git --version &amp;&amp; python3 --version   <span class="cm"># verify</span></div>
         </div>
       </div>
+      </div><!-- /inner -->
     </div>
 
     <!-- ─── SLIDE 05: SETUP ───────────────────────────────────── -->
-    <div class="slide" id="s05">
+    <div class="slide centered" id="s05">
       <p class="tag t" data-en="Installation" data-es="Instalación">Installation</p>
       <h2 class="title t" data-en="Three steps to get started" data-es="Tres pasos para empezar">Three steps to get started</h2>
       <div class="steps3">
@@ -724,7 +757,7 @@ source ~/.bashrc</div>
     <!-- ══════════════════════════════════════════════════════════ -->
 
     <!-- ─── SLIDE 07a-0: DEMO A INTRO ────────────────────────── -->
-    <div class="slide mode-a" id="s07a0">
+    <div class="slide mode-a centered" id="s07a0">
       <p class="tag t" data-en="Demo A" data-es="Demo A">Demo A</p>
       <h2 class="title t" data-en="Standalone — nodes isolated" data-es="Aislado — nodos sin conectar">Standalone — nodes isolated</h2>
       <div class="demo-intro">
@@ -882,7 +915,7 @@ source ~/.bashrc</div>
     <!-- ══════════════════════════════════════════════════════════ -->
     <!--  DEMO A — MODE B (overview)                               -->
     <!-- ══════════════════════════════════════════════════════════ -->
-    <div class="slide mode-b" id="s07b">
+    <div class="slide mode-b centered" id="s07b">
       <p class="tag t" data-en="Demo A" data-es="Demo A">Demo A</p>
       <h2 class="title t" data-en="Standalone — nodes isolated" data-es="Aislado — nodos sin conectar">Standalone — nodes isolated</h2>
       <div class="tl3">
@@ -923,11 +956,11 @@ source ~/.bashrc</div>
           </div>
         </div>
       </div>
-      <div class="run-cmd" style="margin-top:16px;max-width:1040px;width:100%">./scripts/demo-standalone.sh</div>
+      <div class="run-cmd" style="margin-top:16px;max-width:1180px;width:100%">./scripts/demo-standalone.sh</div>
     </div>
 
     <!-- ─── SLIDE 08: CONSENSUS MOMENT ───────────────────────── -->
-    <div class="slide" id="s08">
+    <div class="slide centered" id="s08">
       <p class="tag t" data-en="The key insight" data-es="La idea clave">The key insight</p>
       <div class="cons-split">
         <div class="cons-text">
@@ -1069,7 +1102,7 @@ source ~/.bashrc</div>
     <!-- ══════════════════════════════════════════════════════════ -->
     <!--  DEMO B — MODE B (overview)                               -->
     <!-- ══════════════════════════════════════════════════════════ -->
-    <div class="slide mode-b" id="s09b">
+    <div class="slide mode-b centered" id="s09b">
       <p class="tag t" data-en="Demo B" data-es="Demo B">Demo B</p>
       <h2 class="title t" data-en="Full — connected from the start" data-es="Completo — conectados desde el inicio">Full — connected from the start</h2>
       <div class="tl3">
@@ -1078,9 +1111,7 @@ source ~/.bashrc</div>
             <div class="tln">1</div>
             <div class="tlcard-title t" data-en="Mine 101 blocks" data-es="Minar 101 bloques">Mine 101 blocks</div>
           </div>
-          <div style="background:var(--surf3);aspect-ratio:16/9;display:flex;align-items:center;justify-content:center">
-            <span style="font-size:28px">🔄</span>
-          </div>
+          <img src="images/standalone-nodes-synced.png" alt="Both nodes in sync">
           <div class="tlcard-note t"
             data-en="Both nodes sync in real time. Same height. Same tip hash. Green indicator throughout."
             data-es="Ambos nodos sincronizan en tiempo real. Misma altura. Mismo hash. Indicador verde en todo momento.">
@@ -1112,7 +1143,7 @@ source ~/.bashrc</div>
           </div>
         </div>
       </div>
-      <div class="run-cmd" style="margin-top:16px;max-width:1040px;width:100%">./scripts/demo-full.sh</div>
+      <div class="run-cmd" style="margin-top:16px;max-width:1180px;width:100%">./scripts/demo-full.sh</div>
     </div>
 
     <!-- ─── SLIDE 10: INSIDE A BLOCK ─────────────────────────── -->
@@ -1195,10 +1226,10 @@ source ~/.bashrc</div>
     </div>
 
     <!-- ─── SLIDE 11: MANUAL EXPLORATION ─────────────────────── -->
-    <div class="slide" id="s11">
+    <div class="slide centered" id="s11">
       <p class="tag t" data-en="Hands-on time" data-es="Práctica libre">Hands-on time</p>
       <h2 class="title t" data-en="Explore on your own" data-es="Explora por tu cuenta">Explore on your own</h2>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;max-width:960px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;max-width:1100px">
         <div class="cmd">
           <div class="cmd-script">./scripts/mine-blocks.sh [N] [node]</div>
           <div class="cmd-desc t"
@@ -1232,7 +1263,7 @@ source ~/.bashrc</div>
           </div>
         </div>
       </div>
-      <div style="width:100%;max-width:960px;margin-top:12px">
+      <div style="width:100%;max-width:1100px;margin-top:12px">
         <div class="try-box t"
           data-en="💡 <b>Challenge:</b> reset → Demo A → connect nodes → send 0.5 BTC from node2 to node1 → mine 1 block. Find the change output in block detail and verify both balances."
           data-es="💡 <b>Reto:</b> reset → Demo A → conectar nodos → enviar 0,5 BTC de node2 a node1 → minar 1 bloque. Encuentra la salida de cambio en el detalle del bloque y verifica ambos saldos.">
@@ -1242,7 +1273,7 @@ source ~/.bashrc</div>
     </div>
 
     <!-- ─── SLIDE 12: SUMMARY & Q&A ──────────────────────────── -->
-    <div class="slide" id="s12">
+    <div class="slide centered" id="s12">
       <p class="tag t" data-en="Summary" data-es="Resumen">Summary</p>
       <h2 class="title t" data-en="What we learned today" data-es="Lo que hemos aprendido hoy">What we learned today</h2>
       <div class="sum-wrap">
@@ -1303,7 +1334,7 @@ source ~/.bashrc</div>
     </div>
 
     <!-- ─── SLIDE 13: ABOUT KAIROS TEK ──────────────────────── -->
-    <div class="slide" id="s13">
+    <div class="slide centered" id="s13">
       <div class="about-wrap">
         <div class="about-left">
           <p class="tag t" data-en="About us" data-es="Quiénes somos">About us</p>
