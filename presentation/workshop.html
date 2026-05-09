@@ -1,0 +1,1577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bitcoin Regtest Workshop · Kairos Tek</title>
+<style>
+/* ─── DESIGN TOKENS ─────────────────────────────────────────────── */
+:root {
+  --bg:      #080c16;
+  --surf:    #0f1525;
+  --surf2:   #141d35;
+  --surf3:   #1a2540;
+  --blue:    #3b75f4;
+  --navy:    #2b4bc2;
+  --light:   #ebefff;
+  --muted:   #8896bb;
+  --border:  #1e2d52;
+  --green:   #22c55e;
+  --orange:  #f59e0b;
+  --red:     #ef4444;
+  --mono:    'JetBrains Mono','Fira Code','Cascadia Code','Courier New',monospace;
+  --sans:    'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;background:var(--bg);color:var(--light);
+  font-family:var(--sans);overflow:hidden;user-select:none}
+
+/* ─── MODE SELECTOR ─────────────────────────────────────────────── */
+#mode-selector{
+  position:fixed;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;background:var(--bg);
+  z-index:1000;gap:40px;padding:48px;
+}
+.ms-logo{display:flex;align-items:center;gap:14px}
+.ms-logo-text{font-size:17px;font-weight:800;letter-spacing:.08em;color:var(--light)}
+.ms-logo-text span{color:var(--blue)}
+.ms-headline{font-size:13px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--muted);text-align:center}
+.ms-cards{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:740px;width:100%}
+.ms-card{
+  background:var(--surf);border:2px solid var(--border);padding:32px;
+  cursor:pointer;transition:border-color .15s,background .15s;
+  display:flex;flex-direction:column;gap:12px;
+}
+.ms-card:hover{border-color:var(--blue);background:var(--surf2)}
+.ms-card-tag{font-size:10px;font-weight:700;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--blue)}
+.ms-card h3{font-size:20px;font-weight:800;color:var(--light)}
+.ms-card p{font-size:13px;line-height:1.65;color:var(--muted)}
+.ms-card-badge{
+  display:inline-block;margin-top:8px;padding:6px 18px;background:var(--blue);
+  color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em;
+  align-self:flex-start;
+}
+.ms-card.b .ms-card-badge{background:var(--surf3);border:1px solid var(--blue);color:var(--blue)}
+.ms-hint{font-size:11px;color:var(--muted);text-align:center}
+
+/* ─── PRESENTATION ──────────────────────────────────────────────── */
+#pres{display:none;position:fixed;inset:0;flex-direction:column}
+#pres.on{display:flex}
+
+/* Progress bar */
+#pbar{position:fixed;top:0;left:0;height:3px;background:var(--blue);
+  transition:width .3s ease;z-index:200;pointer-events:none}
+
+/* Slides wrap */
+#swrap{flex:1;position:relative;overflow:hidden}
+.slide{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:52px 80px 72px;
+  opacity:0;pointer-events:none;transition:opacity .22s ease;
+}
+.slide.active{opacity:1;pointer-events:auto}
+
+/* Nav bar */
+#nav{
+  position:fixed;bottom:0;left:0;right:0;height:46px;
+  background:var(--surf);border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;z-index:200;
+}
+.nav-group{display:flex;align-items:center;gap:10px}
+#counter{font-size:12px;font-weight:600;color:var(--muted);font-family:var(--mono)}
+.nbtn{
+  background:var(--surf2);border:1px solid var(--border);color:var(--light);
+  font-size:15px;padding:4px 18px;cursor:pointer;font-family:var(--sans);
+  transition:background .1s;line-height:1;
+}
+.nbtn:hover{background:var(--blue);border-color:var(--blue)}
+.nbtn:disabled{opacity:.3;cursor:default}
+.nbtn:disabled:hover{background:var(--surf2);border-color:var(--border)}
+.ibtn{
+  background:none;border:1px solid var(--border);color:var(--muted);
+  font-size:10px;font-weight:700;letter-spacing:.1em;padding:4px 10px;
+  cursor:pointer;transition:all .1s;font-family:var(--sans);
+}
+.ibtn:hover,.ibtn.on{border-color:var(--blue);color:var(--blue)}
+.ibtn.on{background:rgba(59,117,244,.1)}
+
+/* ─── TYPE SYSTEM ───────────────────────────────────────────────── */
+.tag{font-size:clamp(13px,1.1vw,17px);font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--blue);margin-bottom:14px;align-self:flex-start}
+.title{font-size:clamp(26px,3.6vw,46px);font-weight:800;color:var(--light);
+  line-height:1.1;margin-bottom:20px}
+.lead{font-size:clamp(13px,1.3vw,16px);color:var(--muted);line-height:1.65}
+.title-xl{font-size:clamp(32px,5.5vw,68px);font-weight:900;color:var(--light);line-height:1.0}
+.blue{color:var(--blue)}
+
+/* ─── CODE BLOCKS ───────────────────────────────────────────────── */
+.code{
+  background:#0a1520;border-left:3px solid var(--blue);
+  padding:14px 18px;font-family:var(--mono);font-size:12.5px;
+  color:var(--light);line-height:1.75;position:relative;width:100%;
+}
+.code+.code{margin-top:6px}
+.code .cm{color:#4a6a8a}
+.cbtn{
+  position:absolute;top:8px;right:8px;background:var(--surf2);
+  border:1px solid var(--border);color:var(--muted);font-size:9px;
+  padding:3px 8px;cursor:pointer;font-family:var(--sans);transition:all .1s;
+}
+.cbtn:hover{border-color:var(--blue);color:var(--blue)}
+
+/* ─── CONCEPT CARDS ─────────────────────────────────────────────── */
+.cards4{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;max-width:820px}
+.ccard{background:var(--surf);border:1px solid var(--border);padding:22px;
+  transition:border-color .2s}
+.ccard:hover{border-color:var(--blue)}
+.ccard-icon{font-size:26px;margin-bottom:10px}
+.ccard-term{font-size:15px;font-weight:800;color:var(--light);margin-bottom:7px;
+  letter-spacing:.01em}
+.ccard-def{font-size:12.5px;color:var(--muted);line-height:1.6}
+
+/* ─── OS TABS ───────────────────────────────────────────────────── */
+.os-tabs{display:flex;gap:0;width:100%;margin-bottom:0}
+.otab{
+  padding:9px 22px;font-size:12.5px;font-weight:600;cursor:pointer;
+  border:1px solid var(--border);background:var(--surf);color:var(--muted);
+  transition:all .1s;margin-right:-1px;font-family:var(--sans);
+}
+.otab.on{background:var(--blue);color:#fff;border-color:var(--blue);
+  position:relative;z-index:1}
+.opanel{display:none;width:100%}
+.opanel.on{display:flex;flex-direction:column;gap:8px}
+
+/* ─── STEPS ─────────────────────────────────────────────────────── */
+.steps3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;
+  width:100%;max-width:960px}
+.scard{background:var(--surf);border:1px solid var(--border);padding:22px;
+  display:flex;flex-direction:column;gap:8px}
+.snum{font-size:44px;font-weight:900;color:var(--blue);opacity:.28;
+  line-height:1;font-family:var(--mono)}
+.stitle{font-size:14px;font-weight:700;color:var(--light)}
+.sdesc{font-size:11.5px;color:var(--muted);line-height:1.55}
+
+/* ─── IMAGE SLIDES ──────────────────────────────────────────────── */
+.img-split{display:grid;grid-template-columns:1fr 1.7fr;gap:44px;
+  align-items:center;width:100%;max-width:1100px}
+.img-text{display:flex;flex-direction:column;gap:12px}
+.img-box{border:1px solid var(--border);overflow:hidden;background:var(--surf2)}
+.img-box img{width:100%;display:block}
+.obs{
+  display:flex;gap:11px;align-items:flex-start;padding:11px 15px;
+  background:var(--surf);border-left:3px solid var(--border);
+  font-size:12px;color:var(--muted);line-height:1.5;
+}
+.obs.ok{border-left-color:var(--green)}
+.obs.bad{border-left-color:var(--red)}
+.obs.wait{border-left-color:var(--orange)}
+.obs.info{border-left-color:var(--blue)}
+.obs-i{font-size:15px;flex-shrink:0;margin-top:1px}
+
+/* ─── ARCHITECTURE DIAGRAM ──────────────────────────────────────── */
+.arch-row{display:flex;align-items:center;gap:14px;max-width:900px;
+  width:100%;margin-bottom:28px}
+.abox{background:var(--surf);border:1px solid var(--border);padding:18px 22px;
+  text-align:center;flex:1}
+.abox-icon{font-size:28px;margin-bottom:7px}
+.abox-title{font-size:13px;font-weight:700;color:var(--light)}
+.abox-sub{font-size:10.5px;color:var(--muted);margin-top:3px;line-height:1.4}
+.aarrow{color:var(--blue);font-size:22px;flex-shrink:0}
+.anodes{display:flex;flex-direction:column;gap:7px;flex:1}
+.anode{background:var(--surf);border:1px solid var(--border);padding:10px 14px;text-align:center}
+.anode-t{font-size:12px;font-weight:700;color:var(--light)}
+.anode-p{font-size:10px;color:var(--blue);font-family:var(--mono);margin-top:2px}
+.arch-claim{font-size:16px;font-weight:700;color:var(--muted);
+  text-align:center;letter-spacing:.01em}
+.arch-claim b{color:var(--light)}
+
+/* ─── CONSENSUS SLIDE ───────────────────────────────────────────── */
+.cons-split{display:grid;grid-template-columns:1fr 1.4fr;gap:48px;
+  align-items:center;width:100%;max-width:1100px}
+.cons-text{display:flex;flex-direction:column;gap:22px}
+.cons-q{font-size:clamp(18px,2.4vw,28px);font-weight:800;color:var(--light);line-height:1.2}
+.cons-a{font-size:clamp(12px,1.3vw,15px);color:var(--muted);line-height:1.65}
+.cons-rule{
+  border-left:4px solid var(--blue);padding:15px 18px;
+  background:rgba(59,117,244,.08);
+  font-size:clamp(12px,1.2vw,14px);font-weight:600;line-height:1.65;
+  color:var(--light);font-style:italic;
+}
+.cons-cmd{margin-top:4px}
+
+/* ─── BLOCK ANATOMY ─────────────────────────────────────────────── */
+.block-split{display:grid;grid-template-columns:1fr 1.6fr;gap:44px;
+  align-items:center;width:100%;max-width:1100px}
+.bfield{display:flex;gap:11px;align-items:flex-start;padding:9px 13px;
+  border:1px solid var(--border);background:var(--surf);font-size:11.5px}
+.bfield-k{font-family:var(--mono);color:var(--blue);font-size:10.5px;
+  min-width:90px;font-weight:700;padding-top:1px}
+.bfield-v{color:var(--muted);line-height:1.45}
+.btx{background:var(--surf2);border:1px solid var(--border);padding:12px 15px;
+  margin-top:8px}
+.btx-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--blue);margin-bottom:6px}
+.btx-desc{font-size:12px;color:var(--muted);line-height:1.55}
+
+/* ─── COMMANDS SLIDE ────────────────────────────────────────────── */
+.cmds{display:flex;flex-direction:column;gap:10px;width:100%;max-width:740px}
+.cmd{background:var(--surf);border:1px solid var(--border);padding:15px 18px}
+.cmd-script{font-family:var(--mono);font-size:12.5px;color:var(--blue);margin-bottom:4px}
+.cmd-desc{font-size:12px;color:var(--muted)}
+.try-box{
+  margin-top:16px;padding:16px 20px;
+  background:rgba(59,117,244,.07);border:1px solid var(--blue);
+  font-size:13px;color:var(--light);line-height:1.6;
+}
+
+/* ─── SUMMARY SLIDE ─────────────────────────────────────────────── */
+.sum-wrap{display:grid;grid-template-columns:1fr 260px;gap:56px;
+  align-items:center;width:100%;max-width:1000px}
+.takeaways{display:flex;flex-direction:column;gap:10px}
+.take{
+  display:flex;gap:14px;align-items:flex-start;padding:12px 18px;
+  border-left:3px solid var(--blue);background:var(--surf);
+  font-size:13px;line-height:1.55;
+}
+.take-n{font-family:var(--mono);font-size:10.5px;color:var(--blue);
+  font-weight:700;min-width:18px;padding-top:2px}
+.qr-panel{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+.qr-label{font-size:10px;font-weight:700;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--muted)}
+.qr-frame{background:#fff;padding:8px;width:156px;height:156px;
+  display:flex;align-items:center;justify-content:center}
+.qr-frame img{width:140px;height:140px;display:block}
+.qr-url{font-family:var(--mono);font-size:10px;color:var(--muted)}
+
+/* ─── DEMO TIMELINE (Mode B) ────────────────────────────────────── */
+.tl3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;
+  width:100%;max-width:1040px}
+.tlcard{background:var(--surf);border:1px solid var(--border);
+  overflow:hidden;display:flex;flex-direction:column}
+.tlcard-head{
+  background:var(--surf2);padding:11px 15px;
+  display:flex;gap:10px;align-items:center;border-bottom:1px solid var(--border);
+}
+.tln{
+  width:22px;height:22px;background:var(--blue);color:#fff;
+  font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;font-family:var(--mono);
+}
+.tlcard-title{font-size:12.5px;font-weight:700;color:var(--light)}
+.tlcard img{width:100%;display:block;aspect-ratio:16/9;object-fit:cover;object-position:top}
+.tlcard-note{padding:10px 13px;font-size:11px;color:var(--muted);line-height:1.55;flex:1}
+
+/* ─── WELCOME SLIDE ─────────────────────────────────────────────── */
+.welcome{display:flex;flex-direction:column;align-items:center;gap:0;text-align:center}
+.w-logo{margin-bottom:28px}
+.w-title{font-size:clamp(30px,5vw,60px);font-weight:900;color:var(--light);
+  line-height:1.05;margin-bottom:14px}
+.w-sub{font-size:clamp(12px,1.4vw,16px);color:var(--muted);margin-bottom:36px;line-height:1.5}
+.w-date{
+  font-family:var(--mono);font-size:12px;color:var(--blue);
+  letter-spacing:.1em;padding:8px 20px;border:1px solid var(--border);
+}
+.w-built{font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--border);margin-top:32px}
+
+/* ─── TOAST ─────────────────────────────────────────────────────── */
+#toast{
+  position:fixed;bottom:60px;left:50%;transform:translateX(-50%);
+  background:var(--green);color:#fff;font-size:11px;font-weight:700;
+  padding:6px 18px;letter-spacing:.05em;opacity:0;
+  transition:opacity .15s;pointer-events:none;z-index:999;
+}
+#toast.show{opacity:1}
+
+/* ─── SCROLLABLE INNER ──────────────────────────────────────────── */
+.inner{max-height:calc(100vh - 120px);overflow-y:auto;
+  width:100%;display:flex;flex-direction:column;align-items:center}
+
+/* Demo A intro layout */
+.demo-intro{display:flex;flex-direction:column;gap:20px;width:100%;max-width:680px}
+.demo-intro-box{
+  background:var(--surf);border:1px solid var(--border);padding:18px 22px;
+  font-size:13px;color:var(--muted);line-height:1.65;
+}
+.demo-intro-box b{color:var(--light)}
+.run-cmd{
+  font-family:var(--mono);font-size:13px;color:var(--blue);
+  background:#0a1520;border-left:3px solid var(--blue);
+  padding:12px 18px;
+}
+
+/* Node compare mini */
+.node-compare{display:flex;gap:12px;width:100%;max-width:480px;margin-top:4px}
+.nc-box{flex:1;background:var(--surf2);border:1px solid var(--border);
+  padding:12px;text-align:center}
+.nc-name{font-size:10px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.nc-val{font-size:20px;font-weight:900;line-height:1}
+.nc-val.ok{color:var(--green)}
+.nc-val.bad{color:var(--red)}
+
+/* ─── ABOUT SLIDE ───────────────────────────────────────────────── */
+.about-wrap{display:grid;grid-template-columns:1fr 1fr;gap:48px;
+  align-items:start;width:100%;max-width:1100px}
+.about-left{display:flex;flex-direction:column;gap:16px}
+.about-desc{font-size:13px;color:var(--muted);line-height:1.75}
+.about-topics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.atopic{background:var(--surf);border:1px solid var(--border);
+  padding:9px 13px;font-size:12px;color:var(--light)}
+.about-right{display:flex;flex-direction:column;gap:16px}
+.about-cta-box{
+  background:var(--surf);border:1px solid var(--blue);padding:28px;
+  display:flex;flex-direction:column;gap:16px;
+}
+.about-cta-label{font-size:16px;font-weight:800;color:var(--light);line-height:1.3}
+.about-cta-sub{font-size:12.5px;color:var(--muted);line-height:1.65}
+.about-cta-btn{
+  display:inline-block;background:var(--blue);color:#fff;
+  font-size:13px;font-weight:700;padding:12px 24px;
+  text-decoration:none;letter-spacing:.03em;
+  transition:background .15s;align-self:flex-start;
+}
+.about-cta-btn:hover{background:var(--navy)}
+.about-formats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
+.afmt{font-size:11px;color:var(--muted);padding:6px 10px;
+  border:1px solid var(--border);background:var(--surf2)}
+.about-byline{
+  font-size:13px;font-weight:700;font-style:italic;color:var(--muted);
+  border-left:3px solid var(--blue);padding:10px 16px;
+  background:rgba(59,117,244,.06);line-height:1.5;
+}
+
+/* ─── LOGO SVG (transparent background, no blend tricks needed) ─── */
+.kt-logo{display:inline-block;flex-shrink:0}
+
+/* ─── NAV LOGO ──────────────────────────────────────────────────── */
+#nav-logo{
+  position:absolute;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;pointer-events:none;
+}
+
+/* ─── COWORK CALLOUT ────────────────────────────────────────────── */
+.cowork-box{
+  background:linear-gradient(135deg,rgba(59,117,244,.12) 0%,rgba(43,75,194,.08) 100%);
+  border:1px solid var(--blue);padding:20px 22px;
+  display:flex;flex-direction:column;gap:10px;margin-top:4px;
+}
+.cowork-tag{font-size:9px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--blue)}
+.cowork-headline{font-size:14px;font-weight:800;color:var(--light);line-height:1.3}
+.cowork-body{font-size:12px;color:var(--muted);line-height:1.6}
+.cowork-cta{
+  font-size:11px;font-weight:700;color:var(--blue);letter-spacing:.04em;
+  padding-top:4px;border-top:1px solid var(--border);
+}
+
+/* ─── EXPANDED BLOCK ANATOMY ────────────────────────────────────── */
+.bfields-grid{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+
+/* ─── EXPANDED ARCH ─────────────────────────────────────────────── */
+.port-grid{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.port-tag{font-family:var(--mono);font-size:11px;color:var(--blue);
+  background:#0a1520;border:1px solid var(--border);padding:3px 10px}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  MODE SELECTOR                                                   -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="mode-selector">
+  <div class="ms-logo">
+    <img class="kt-logo" src="logos/logotipo-white.svg" alt="Kairos Tek" style="height:52px;width:auto">
+  </div>
+
+  <p class="ms-headline t" data-en="Choose how demo slides work" data-es="Elige cómo funcionan las diapositivas de demo">
+    Choose how demo slides work
+  </p>
+
+  <div class="ms-cards">
+    <div class="ms-card" onclick="startPresentation('a')">
+      <div class="ms-card-tag">Option A</div>
+      <h3 class="t" data-en="Step by step" data-es="Paso a paso">Step by step</h3>
+      <p class="t"
+         data-en="Each demo step is its own slide. Navigate one click at a time — ideal for live instruction where you control the reveal pace."
+         data-es="Cada paso de la demo es una diapositiva. Navega click a click — ideal para instrucción en vivo donde controlas el ritmo.">
+        Each demo step is its own slide. Navigate one click at a time — ideal for live instruction where you control the reveal pace.
+      </p>
+      <span class="ms-card-badge t" data-en="→ Recommended for live demos" data-es="→ Recomendado para demos en vivo">→ Recommended for live demos</span>
+    </div>
+
+    <div class="ms-card b" onclick="startPresentation('b')">
+      <div class="ms-card-tag">Option B</div>
+      <h3 class="t" data-en="Overview" data-es="Visión de conjunto">Overview</h3>
+      <p class="t"
+         data-en="All demo steps visible on a single slide. Good for self-study or when you want students to see the full flow at once."
+         data-es="Todos los pasos visibles en una sola diapositiva. Ideal para autoestudio o cuando quieres que los alumnos vean el flujo completo.">
+        All demo steps visible on a single slide. Good for self-study or when you want students to see the full flow at once.
+      </p>
+      <span class="ms-card-badge t" data-en="→ Good for reference &amp; review" data-es="→ Mejor para referencia y repaso">→ Good for reference &amp; review</span>
+    </div>
+  </div>
+
+  <p class="ms-hint t"
+     data-en="You can switch modes at any time from the navigation bar."
+     data-es="Puedes cambiar el modo en cualquier momento desde la barra de navegación.">
+    You can switch modes at any time from the navigation bar.
+  </p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  PRESENTATION                                                    -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="pres">
+  <div id="pbar"></div>
+
+  <div id="swrap">
+
+    <!-- ─── SLIDE 01: WELCOME ─────────────────────────────────── -->
+    <div class="slide" id="s01">
+      <div class="welcome">
+        <h1 class="w-title t" data-en="Bitcoin Regtest<br>Workshop" data-es="Taller Práctico<br>Bitcoin Regtest">Bitcoin Regtest<br>Workshop</h1>
+        <p class="w-sub t"
+           data-en="Bitcoin Regtest Workshop &nbsp;·&nbsp; Kairos Tek"
+           data-es="Taller Práctico Bitcoin Regtest &nbsp;·&nbsp; Kairos Tek">
+          Bitcoin Regtest Workshop &nbsp;·&nbsp; Kairos Tek
+        </p>
+        <div class="w-date" id="dynamic-date"></div>
+        <p class="w-built t" data-en="Built with Kairos Tek" data-es="Desarrollado con Kairos Tek">Built with Kairos Tek</p>
+      </div>
+    </div>
+
+    <!-- ─── SLIDE 02: WHAT ARE WE BUILDING ───────────────────── -->
+    <div class="slide" id="s02">
+      <p class="tag t" data-en="Overview" data-es="Visión general">Overview</p>
+      <h2 class="title t" data-en="What are we building?" data-es="¿Qué vamos a construir?">What are we building?</h2>
+
+      <div class="arch-row">
+        <div class="abox">
+          <div class="abox-icon">🌐</div>
+          <div class="abox-title t" data-en="Your Browser" data-es="Tu navegador">Your Browser</div>
+          <div class="abox-sub t" data-en="Live dashboard — blocks, mempool, balances" data-es="Dashboard en vivo — bloques, mempool, saldos">Live dashboard — blocks, mempool, balances</div>
+        </div>
+        <div class="aarrow">⇆</div>
+        <div class="abox">
+          <div class="abox-icon">🐍</div>
+          <div class="abox-title">server.py</div>
+          <div class="abox-sub t" data-en="Local proxy — port 18500" data-es="Proxy local — puerto 18500">Local proxy — port 18500</div>
+        </div>
+        <div class="aarrow">⇆</div>
+        <div class="anodes">
+          <div class="anode">
+            <div class="anode-t">node1</div>
+            <div class="anode-p">bitcoind · RPC 1234</div>
+          </div>
+          <div class="anode">
+            <div class="anode-t">node2</div>
+            <div class="anode-p">bitcoind · RPC 2345</div>
+          </div>
+        </div>
+      </div>
+
+      <p class="arch-claim t"
+         data-en="<b>Two Bitcoin nodes.</b> A local private blockchain. A live dashboard."
+         data-es="<b>Dos nodos Bitcoin.</b> Una blockchain local y privada. Un dashboard en vivo.">
+        <b>Two Bitcoin nodes.</b> A local private blockchain. A live dashboard.
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;max-width:820px;width:100%;margin-top:20px">
+        <div style="background:var(--surf);border:1px solid var(--border);padding:14px 16px">
+          <div style="font-size:9px;font-weight:700;letter-spacing:.18em;color:var(--blue);margin-bottom:6px">NODE 1</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.7">
+            RPC &nbsp;<span style="color:var(--blue)">:1234</span><br>
+            P2P &nbsp;<span style="color:var(--blue)">:1235</span><br>
+            <span style="color:var(--green)">miner · wallet</span>
+          </div>
+        </div>
+        <div style="background:var(--surf);border:1px solid var(--border);padding:14px 16px">
+          <div style="font-size:9px;font-weight:700;letter-spacing:.18em;color:var(--blue);margin-bottom:6px">NODE 2</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.7">
+            RPC &nbsp;<span style="color:var(--blue)">:2345</span><br>
+            P2P &nbsp;<span style="color:var(--blue)">:2346</span><br>
+            <span style="color:var(--orange)">peer · recipient</span>
+          </div>
+        </div>
+        <div style="background:var(--surf);border:1px solid var(--border);padding:14px 16px">
+          <div style="font-size:9px;font-weight:700;letter-spacing:.18em;color:var(--blue);margin-bottom:6px">DASHBOARD</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.7">
+            server.py <span style="color:var(--blue)">:18500</span><br>
+            <span class="t" style="font-family:var(--sans);font-size:10.5px"
+              data-en="polls both via RPC"
+              data-es="consulta ambos por RPC">polls both via RPC</span>
+          </div>
+        </div>
+      </div>
+      <p class="lead" style="margin-top:16px;text-align:center">
+        <span class="t"
+          data-en="No real money &nbsp;·&nbsp; No internet required &nbsp;·&nbsp; 100% yours"
+          data-es="Sin dinero real &nbsp;·&nbsp; Sin internet &nbsp;·&nbsp; 100% tuyo">
+          No real money &nbsp;·&nbsp; No internet required &nbsp;·&nbsp; 100% yours
+        </span>
+      </p>
+    </div>
+
+    <!-- ─── SLIDE 03: KEY CONCEPTS ────────────────────────────── -->
+    <div class="slide" id="s03">
+      <p class="tag t" data-en="Theory" data-es="Teoría">Theory</p>
+      <h2 class="title t" data-en="Key concepts" data-es="Conceptos clave">Key concepts</h2>
+      <div class="cards4">
+        <div class="ccard">
+          <div class="ccard-icon">₿</div>
+          <div class="ccard-term">Regtest</div>
+          <div class="ccard-def t"
+            data-en="A private local blockchain that only exists on your machine. No real Bitcoin, no internet — just a controlled sandbox for learning and development."
+            data-es="Una blockchain privada y local que solo existe en tu máquina. Sin Bitcoin real, sin internet — un entorno controlado para aprender y desarrollar.">
+            A private local blockchain that only exists on your machine. No real Bitcoin, no internet — just a controlled sandbox for learning and development.
+          </div>
+        </div>
+        <div class="ccard">
+          <div class="ccard-icon">🖥</div>
+          <div class="ccard-term t" data-en="Node" data-es="Nodo">Node</div>
+          <div class="ccard-def t"
+            data-en="A program (bitcoind) that holds a complete copy of the blockchain. Your two nodes are like two banks that each keep their own independent ledger."
+            data-es="Un programa (bitcoind) que guarda una copia completa de la blockchain. Tus dos nodos son como dos bancos, cada uno con su propio libro de cuentas independiente.">
+            A program (bitcoind) that holds a complete copy of the blockchain. Your two nodes are like two banks that each keep their own independent ledger.
+          </div>
+        </div>
+        <div class="ccard">
+          <div class="ccard-icon">⏳</div>
+          <div class="ccard-term">Mempool</div>
+          <div class="ccard-def t"
+            data-en="The waiting room for unconfirmed transactions. A transaction lives here until a miner includes it in a block. Nothing is final until then."
+            data-es="La sala de espera para transacciones sin confirmar. Una transacción vive aquí hasta que un minero la incluye en un bloque. Nada es definitivo hasta ese momento.">
+            The waiting room for unconfirmed transactions. A transaction lives here until a miner includes it in a block. Nothing is final until then.
+          </div>
+        </div>
+        <div class="ccard">
+          <div class="ccard-icon">🔗</div>
+          <div class="ccard-term t" data-en="Consensus" data-es="Consenso">Consensus</div>
+          <div class="ccard-def t"
+            data-en="Bitcoin's core rule: every node always adopts the longest valid chain. This is how decentralized agreement works — no authority needed, no vote required."
+            data-es="La regla fundamental de Bitcoin: cada nodo adopta siempre la cadena válida más larga. Así funciona el acuerdo descentralizado — sin autoridad central ni votaciones.">
+            Bitcoin's core rule: every node always adopts the longest valid chain. This is how decentralized agreement works — no authority needed, no vote required.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SLIDE 04: PREREQUISITES ───────────────────────────── -->
+    <div class="slide" id="s04">
+      <p class="tag t" data-en="Before we start" data-es="Antes de empezar">Before we start</p>
+      <h2 class="title t" data-en="Prerequisites" data-es="Prerrequisitos">Prerequisites</h2>
+      <div style="width:100%;max-width:800px">
+        <div class="os-tabs">
+          <button class="otab on" onclick="showOS('win',this)">🪟 Windows</button>
+          <button class="otab" onclick="showOS('mac',this)">🍎 macOS</button>
+          <button class="otab" onclick="showOS('lin',this)">🐧 Linux / WSL2</button>
+        </div>
+        <!-- Windows -->
+        <div class="opanel on" id="os-win">
+          <div class="obs info"><span class="obs-i">ℹ️</span>
+            <span class="t"
+              data-en="This project does <b>not</b> work in PowerShell or CMD. You need WSL2 — Ubuntu inside Windows, free and official."
+              data-es="Este proyecto <b>no</b> funciona en PowerShell ni CMD. Necesitas WSL2 — Ubuntu dentro de Windows, gratis y oficial.">
+              This project does <b>not</b> work in PowerShell or CMD. You need WSL2 — Ubuntu inside Windows, free and official.
+            </span>
+          </div>
+          <div class="code"><button class="cbtn" onclick="copyCode(this)">copy</button>
+<span class="cm"># Step 1 — PowerShell as Administrator</span>
+wsl --install
+<span class="cm"># Restart your computer, then open Ubuntu from Start menu</span></div>
+          <div class="code"><button class="cbtn" onclick="copyCode(this)">copy</button>
+<span class="cm"># Step 2 — Inside Ubuntu terminal</span>
+sudo apt update &amp;&amp; sudo apt upgrade -y
+sudo apt install -y git curl wget python3 wslu</div>
+          <div class="obs ok"><span class="obs-i">✅</span>
+            <span class="t"
+              data-en="From now on, every command in this workshop runs inside the <b>Ubuntu terminal</b> — not PowerShell."
+              data-es="A partir de ahora, todos los comandos del taller se ejecutan dentro del <b>terminal de Ubuntu</b> — no en PowerShell.">
+              From now on, every command in this workshop runs inside the <b>Ubuntu terminal</b> — not PowerShell.
+            </span>
+          </div>
+        </div>
+        <!-- macOS -->
+        <div class="opanel" id="os-mac">
+          <div class="code"><button class="cbtn" onclick="copyCode(this)">copy</button>
+<span class="cm"># Step 1 — Install Homebrew (macOS package manager)</span>
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"</div>
+          <div class="code"><button class="cbtn" onclick="copyCode(this)">copy</button>
+<span class="cm"># Step 2 — Install Python 3 (git is included with Homebrew)</span>
+brew install python@3.11
+git --version   <span class="cm"># should show git version 2.x.x</span></div>
+          <div class="obs ok"><span class="obs-i">✅</span>
+            <span class="t"
+              data-en="Open Terminal with ⌘ Space → type Terminal → Enter. Homebrew also installs git."
+              data-es="Abre Terminal con ⌘ Espacio → escribe Terminal → Enter. Homebrew también instala git.">
+              Open Terminal with ⌘ Space → type Terminal → Enter. Homebrew also installs git.
+            </span>
+          </div>
+        </div>
+        <!-- Linux -->
+        <div class="opanel" id="os-lin">
+          <div class="code"><button class="cbtn" onclick="copyCode(this)">copy</button>
+<span class="cm"># Install required tools</span>
+sudo apt update
+sudo apt install -y git curl wget python3</div>
+          <div class="code"><button class="cbtn" onclick="copyCode(this)">copy</button>
+<span class="cm"># WSL2 only — lets the dashboard open in your Windows browser</span>
+sudo apt install -y wslu</div>
+          <div class="code"><button class="cbtn" onclick="copyCode(this)">copy</button>
+git --version &amp;&amp; python3 --version   <span class="cm"># verify</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SLIDE 05: SETUP ───────────────────────────────────── -->
+    <div class="slide" id="s05">
+      <p class="tag t" data-en="Installation" data-es="Instalación">Installation</p>
+      <h2 class="title t" data-en="Three steps to get started" data-es="Tres pasos para empezar">Three steps to get started</h2>
+      <div class="steps3">
+        <div class="scard">
+          <div class="snum">01</div>
+          <div class="stitle t" data-en="Clone the project" data-es="Clonar el proyecto">Clone the project</div>
+          <div class="sdesc t"
+            data-en="Download the code and make scripts executable."
+            data-es="Descarga el código y haz los scripts ejecutables.">
+            Download the code and make scripts executable.
+          </div>
+          <div class="code" style="font-size:11.5px"><button class="cbtn" onclick="copyCode(this)">copy</button>
+cd ~
+git clone https://github.com/Kairos-Tek/bitcoin-workshop.git
+cd bitcoin-workshop
+chmod +x start-dashboard.sh stop-dashboard.sh scripts/*.sh</div>
+        </div>
+        <div class="scard">
+          <div class="snum">02</div>
+          <div class="stitle t" data-en="Install Bitcoin Core" data-es="Instalar Bitcoin Core">Install Bitcoin Core</div>
+          <div class="sdesc t"
+            data-en="Run the installer for your OS. Linux/WSL2: reload PATH after."
+            data-es="Ejecuta el instalador para tu sistema. Linux/WSL2: recarga el PATH después.">
+            Run the installer for your OS. Linux/WSL2: reload PATH after.
+          </div>
+          <div class="code" style="font-size:11.5px"><button class="cbtn" onclick="copyCode(this)">copy</button>
+<span class="cm"># macOS</span>
+./scripts/install-mac.sh
+
+<span class="cm"># Linux / WSL2</span>
+./scripts/install-linux.sh
+source ~/.bashrc</div>
+        </div>
+        <div class="scard">
+          <div class="snum">03</div>
+          <div class="stitle t" data-en="Start nodes &amp; dashboard" data-es="Iniciar nodos y dashboard">Start nodes &amp; dashboard</div>
+          <div class="sdesc t"
+            data-en="Launch both Bitcoin nodes, then open the dashboard in your browser."
+            data-es="Lanza los dos nodos Bitcoin y abre el dashboard en el navegador.">
+            Launch both Bitcoin nodes, then open the dashboard in your browser.
+          </div>
+          <div class="code" style="font-size:11.5px"><button class="cbtn" onclick="copyCode(this)">copy</button>
+./scripts/start-nodes.sh
+./start-dashboard.sh
+<span class="cm"># → opens http://localhost:18500</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SLIDE 06: THE DASHBOARD ──────────────────────────── -->
+    <div class="slide" id="s06">
+      <p class="tag t" data-en="Starting point" data-es="Estado inicial">Starting point</p>
+      <h2 class="title t" data-en="The dashboard — initial state" data-es="El dashboard — estado inicial">The dashboard — initial state</h2>
+      <div class="img-split">
+        <div class="img-text">
+          <div class="obs info"><span class="obs-i">🔵</span>
+            <span class="t"
+              data-en="Both nodes show <b>Online</b>. Height 0. Mempool empty. Wallet 0 BTC."
+              data-es="Ambos nodos aparecen como <b>Online</b>. Altura 0. Mempool vacío. Saldo 0 BTC.">
+              Both nodes show <b>Online</b>. Height 0. Mempool empty. Wallet 0 BTC.
+            </span>
+          </div>
+          <div class="obs ok"><span class="obs-i">✅</span>
+            <span class="t"
+              data-en="This is the correct starting state — a clean private blockchain with no activity yet."
+              data-es="Este es el estado inicial correcto — una blockchain privada limpia, sin ninguna actividad todavía.">
+              This is the correct starting state — a clean private blockchain with no activity yet.
+            </span>
+          </div>
+          <div class="obs info"><span class="obs-i">🔄</span>
+            <span class="t"
+              data-en="Data refreshes automatically every few seconds. The <b>↻ Refresh</b> button forces an immediate update."
+              data-es="Los datos se actualizan automáticamente cada pocos segundos. El botón <b>↻ Refresh</b> fuerza una actualización inmediata.">
+              Data refreshes automatically every few seconds. The <b>↻ Refresh</b> button forces an immediate update.
+            </span>
+          </div>
+          <div class="obs wait"><span class="obs-i">💡</span>
+            <span class="t"
+              data-en="Open two terminal tabs and run <code style='color:var(--blue)'>tail -f ~/bitcoin/node1/regtest/debug.log</code> to watch live node activity."
+              data-es="Abre dos pestañas del terminal y ejecuta <code style='color:var(--blue)'>tail -f ~/bitcoin/node1/regtest/debug.log</code> para ver la actividad en vivo del nodo.">
+              Open two terminal tabs and run <code style='color:var(--blue)'>tail -f ~/bitcoin/node1/regtest/debug.log</code> to watch live node activity.
+            </span>
+          </div>
+        </div>
+        <div class="img-box">
+          <img src="images/dashboard-initial-state.png" alt="Dashboard initial state">
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!--  DEMO A — MODE A (step by step)                           -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+
+    <!-- ─── SLIDE 07a-0: DEMO A INTRO ────────────────────────── -->
+    <div class="slide mode-a" id="s07a0">
+      <p class="tag t" data-en="Demo A" data-es="Demo A">Demo A</p>
+      <h2 class="title t" data-en="Standalone — nodes isolated" data-es="Aislado — nodos sin conectar">Standalone — nodes isolated</h2>
+      <div class="demo-intro">
+        <div class="demo-intro-box">
+          <span class="t"
+            data-en="Node1 mines, sends, and confirms everything on its own. <b>Node2 is never connected as a peer</b> — it runs in complete isolation, building nothing."
+            data-es="Node1 mina, envía y confirma todo por su cuenta. <b>Node2 nunca se conecta como par</b> — funciona en aislamiento total, sin construir nada.">
+            Node1 mines, sends, and confirms everything on its own. <b>Node2 is never connected as a peer</b> — it runs in complete isolation, building nothing.
+          </span>
+        </div>
+        <div class="run-cmd">./scripts/demo-standalone.sh</div>
+        <div class="demo-intro-box">
+          <span class="t"
+            data-en="The script runs automatically and <b>pauses twice</b> for you to explore the dashboard. Press Enter in the terminal to advance each time."
+            data-es="El script se ejecuta automáticamente y <b>hace dos pausas</b> para que explores el dashboard. Pulsa Enter en el terminal para avanzar cada vez.">
+            The script runs automatically and <b>pauses twice</b> for you to explore the dashboard. Press Enter in the terminal to advance each time.
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SLIDE 07a-1: 101 BLOCKS ──────────────────────────── -->
+    <div class="slide mode-a" id="s07a1">
+      <p class="tag t" data-en="Demo A · Pause 1" data-es="Demo A · Pausa 1">Demo A · Pause 1</p>
+      <h2 class="title t" data-en="After mining 101 blocks" data-es="Tras minar 101 bloques">After mining 101 blocks</h2>
+      <div class="img-split">
+        <div class="img-text">
+          <div class="obs ok"><span class="obs-i">✅</span>
+            <span class="t"
+              data-en="<b>node1:</b> 101 blocks — 50 BTC wallet balance (coinbase now mature)"
+              data-es="<b>node1:</b> 101 bloques — saldo de 50 BTC (coinbase ya maduro)">
+              <b>node1:</b> 101 blocks — 50 BTC wallet balance (coinbase now mature)
+            </span>
+          </div>
+          <div class="obs bad"><span class="obs-i">🔴</span>
+            <span class="t"
+              data-en="<b>node2:</b> height 0, 0 BTC — it has never seen a single block"
+              data-es="<b>node2:</b> altura 0, 0 BTC — nunca ha visto un solo bloque">
+              <b>node2:</b> height 0, 0 BTC — it has never seen a single block
+            </span>
+          </div>
+          <div class="obs bad"><span class="obs-i">🔴</span>
+            <span class="t"
+              data-en="<b>Comparison panel:</b> OUT OF SYNC — different heights, different tip hashes"
+              data-es="<b>Panel de comparación:</b> FUERA DE SYNC — alturas distintas, hashes distintos">
+              <b>Comparison panel:</b> OUT OF SYNC — different heights, different tip hashes
+            </span>
+          </div>
+          <div class="obs wait"><span class="obs-i">💡</span>
+            <span class="t"
+              data-en="Why 101 blocks? Bitcoin requires 100 confirmations before coinbase coins can be spent — the maturity rule."
+              data-es="¿Por qué 101 bloques? Bitcoin exige 100 confirmaciones antes de poder gastar las monedas del coinbase — la regla de madurez.">
+              Why 101 blocks? Bitcoin requires 100 confirmations before coinbase coins can be spent — the maturity rule.
+            </span>
+          </div>
+          <div class="node-compare">
+            <div class="nc-box">
+              <div class="nc-name">node1</div>
+              <div class="nc-val ok">101</div>
+            </div>
+            <div class="nc-box">
+              <div class="nc-name">node2</div>
+              <div class="nc-val bad">0</div>
+            </div>
+          </div>
+        </div>
+        <div class="img-box">
+          <img src="images/standalone-before-send.png" alt="Standalone before send">
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SLIDE 07a-2: MEMPOOL ──────────────────────────────── -->
+    <div class="slide mode-a" id="s07a2">
+      <p class="tag t" data-en="Demo A · Pause 2" data-es="Demo A · Pausa 2">Demo A · Pause 2</p>
+      <h2 class="title t" data-en="1 BTC sent — in the mempool" data-es="1 BTC enviado — en el mempool">1 BTC sent — in the mempool</h2>
+      <div class="img-split">
+        <div class="img-text">
+          <div class="obs wait"><span class="obs-i">⏳</span>
+            <span class="t"
+              data-en="<b>node1 mempool:</b> 1 pending transaction"
+              data-es="<b>Mempool node1:</b> 1 transacción pendiente">
+              <b>node1 mempool:</b> 1 pending transaction
+            </span>
+          </div>
+          <div class="obs bad"><span class="obs-i">🔴</span>
+            <span class="t"
+              data-en="<b>node2 mempool:</b> 0 — it never received the broadcast (not connected)"
+              data-es="<b>Mempool node2:</b> 0 — nunca recibió el broadcast (no conectado)">
+              <b>node2 mempool:</b> 0 — it never received the broadcast (not connected)
+            </span>
+          </div>
+          <div class="obs info"><span class="obs-i">💰</span>
+            <span class="t"
+              data-en="<b>Wallet balances unchanged</b> — the transaction exists but has not been confirmed in a block"
+              data-es="<b>Saldos sin cambio</b> — la transacción existe pero aún no está confirmada en un bloque">
+              <b>Wallet balances unchanged</b> — the transaction exists but has not been confirmed in a block
+            </span>
+          </div>
+          <div class="obs wait"><span class="obs-i">💡</span>
+            <span class="t"
+              data-en="You can send multiple transactions before mining. Each one appears in node1's mempool independently."
+              data-es="Puedes enviar varias transacciones antes de minar. Cada una aparece en el mempool de node1 de forma independiente.">
+              You can send multiple transactions before mining. Each one appears in node1's mempool independently.
+            </span>
+          </div>
+        </div>
+        <div class="img-box">
+          <img src="images/standalone-mempool-pending.png" alt="Standalone mempool pending">
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SLIDE 07a-3: AFTER CONFIRMATION ──────────────────── -->
+    <div class="slide mode-a" id="s07a3">
+      <p class="tag t" data-en="Demo A · After script" data-es="Demo A · Tras el script">Demo A · After script</p>
+      <h2 class="title t" data-en="Confirmed — but node2 knows nothing" data-es="Confirmado — pero node2 no sabe nada">Confirmed — but node2 knows nothing</h2>
+      <div class="img-split">
+        <div class="img-text">
+          <div class="obs ok"><span class="obs-i">✅</span>
+            <span class="t"
+              data-en="<b>node1:</b> mempool empty, ~49 BTC (50 − 1 sent − fee), 102 blocks"
+              data-es="<b>node1:</b> mempool vacío, ~49 BTC (50 − 1 enviado − comisión), 102 bloques">
+              <b>node1:</b> mempool empty, ~49 BTC (50 − 1 sent − fee), 102 blocks
+            </span>
+          </div>
+          <div class="obs bad"><span class="obs-i">🔴</span>
+            <span class="t"
+              data-en="<b>node2:</b> still at height 0, still 0 BTC — completely isolated"
+              data-es="<b>node2:</b> sigue en altura 0, sigue con 0 BTC — completamente aislado">
+              <b>node2:</b> still at height 0, still 0 BTC — completely isolated
+            </span>
+          </div>
+          <div class="obs info"><span class="obs-i">🔍</span>
+            <span class="t"
+              data-en="Click block 102 in node1's list → it shows <b>2 transactions</b>: coinbase + 1 BTC payment"
+              data-es="Haz clic en el bloque 102 en node1 → muestra <b>2 transacciones</b>: coinbase + pago de 1 BTC">
+              Click block 102 in node1's list → it shows <b>2 transactions</b>: coinbase + 1 BTC payment
+            </span>
+          </div>
+          <div class="obs wait"><span class="obs-i">▶</span>
+            <span class="t"
+              data-en="Now run <code style='color:var(--blue)'>./scripts/connect-nodes.sh</code> and watch the consensus moment happen →"
+              data-es="Ahora ejecuta <code style='color:var(--blue)'>./scripts/connect-nodes.sh</code> y observa el momento del consenso →">
+              Now run <code style='color:var(--blue)'>./scripts/connect-nodes.sh</code> and watch the consensus moment happen →
+            </span>
+          </div>
+        </div>
+        <div class="img-box">
+          <img src="images/standalone-after-confirmation.png" alt="Standalone after confirmation">
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!--  DEMO A — MODE B (overview)                               -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <div class="slide mode-b" id="s07b">
+      <p class="tag t" data-en="Demo A" data-es="Demo A">Demo A</p>
+      <h2 class="title t" data-en="Standalone — nodes isolated" data-es="Aislado — nodos sin conectar">Standalone — nodes isolated</h2>
+      <div class="tl3">
+        <div class="tlcard">
+          <div class="tlcard-head">
+            <div class="tln">1</div>
+            <div class="tlcard-title t" data-en="Mine 101 blocks" data-es="Minar 101 bloques">Mine 101 blocks</div>
+          </div>
+          <img src="images/standalone-before-send.png" alt="">
+          <div class="tlcard-note t"
+            data-en="node1: 50 BTC. node2: height 0, 0 BTC. Not connected — no blocks ever shared."
+            data-es="node1: 50 BTC. node2: altura 0, 0 BTC. Sin conexión — ningún bloque compartido.">
+            node1: 50 BTC. node2: height 0, 0 BTC. Not connected — no blocks ever shared.
+          </div>
+        </div>
+        <div class="tlcard">
+          <div class="tlcard-head">
+            <div class="tln">2</div>
+            <div class="tlcard-title t" data-en="Send 1 BTC → confirm" data-es="Enviar 1 BTC → confirmar">Send 1 BTC → confirm</div>
+          </div>
+          <img src="images/standalone-mempool-pending.png" alt="">
+          <div class="tlcard-note t"
+            data-en="Mempool on node1 only. node2 never sees the transaction. After 1 block: node1 ~49 BTC, node2 still 0."
+            data-es="Mempool solo en node1. node2 nunca ve la transacción. Tras 1 bloque: node1 ~49 BTC, node2 sigue con 0.">
+            Mempool on node1 only. node2 never sees the transaction. After 1 block: node1 ~49 BTC, node2 still 0.
+          </div>
+        </div>
+        <div class="tlcard">
+          <div class="tlcard-head">
+            <div class="tln">3</div>
+            <div class="tlcard-title t" data-en="Connect → node2 syncs" data-es="Conectar → node2 sincroniza">Connect → node2 syncs</div>
+          </div>
+          <img src="images/standalone-nodes-synced.png" alt="">
+          <div class="tlcard-note t"
+            data-en="run connect-nodes.sh. node2 jumps from 0 → 102. Balance updates to 1 BTC. Green sync indicator."
+            data-es="Ejecuta connect-nodes.sh. node2 salta de 0 → 102. Saldo actualizado a 1 BTC. Indicador verde.">
+            run connect-nodes.sh. node2 jumps from 0 → 102. Balance updates to 1 BTC. Green sync indicator.
+          </div>
+        </div>
+      </div>
+      <div class="run-cmd" style="margin-top:16px;max-width:1040px;width:100%">./scripts/demo-standalone.sh</div>
+    </div>
+
+    <!-- ─── SLIDE 08: CONSENSUS MOMENT ───────────────────────── -->
+    <div class="slide" id="s08">
+      <p class="tag t" data-en="The key insight" data-es="La idea clave">The key insight</p>
+      <div class="cons-split">
+        <div class="cons-text">
+          <h2 class="cons-q t"
+            data-en="What happens when we connect the nodes?"
+            data-es="¿Qué pasa cuando conectamos los nodos?">
+            What happens when we connect the nodes?
+          </h2>
+          <p class="cons-a t"
+            data-en="node2 discovers that node1's chain is <b>102 blocks longer</b> than its own (which had 0). Without any human intervention, node2 discards its empty state and downloads node1's entire chain."
+            data-es="node2 descubre que la cadena de node1 es <b>102 bloques más larga</b> que la suya (que tenía 0). Sin intervención humana, node2 descarta su estado vacío y descarga toda la cadena de node1.">
+            node2 discovers that node1's chain is <b>102 blocks longer</b> than its own (which had 0). Without any human intervention, node2 discards its empty state and downloads node1's entire chain.
+          </p>
+          <div class="cons-rule t"
+            data-en="&ldquo;Nodes always adopt the longest valid chain.&rdquo; This is Bitcoin's core consensus rule — no authority, no vote, no administrator."
+            data-es="&laquo;Los nodos siempre adoptan la cadena válida más larga.&raquo; Esta es la regla de consenso fundamental de Bitcoin — sin autoridad, sin votos, sin administrador.">
+            &ldquo;Nodes always adopt the longest valid chain.&rdquo; This is Bitcoin's core consensus rule — no authority, no vote, no administrator.
+          </div>
+          <div class="cons-cmd code"><button class="cbtn" onclick="copyCode(this)">copy</button>./scripts/connect-nodes.sh</div>
+        </div>
+        <div class="img-box">
+          <img src="images/standalone-nodes-synced.png" alt="Nodes synced">
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!--  DEMO B — MODE A (step by step)                           -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+
+    <!-- ─── SLIDE 09a-0: DEMO B INTRO ────────────────────────── -->
+    <div class="slide mode-a" id="s09a0">
+      <p class="tag t" data-en="Demo B" data-es="Demo B">Demo B</p>
+      <h2 class="title t" data-en="Full — connected from the start" data-es="Completo — conectados desde el inicio">Full — connected from the start</h2>
+      <div class="demo-intro">
+        <div class="demo-intro-box">
+          <span class="t"
+            data-en="Both nodes are connected as peers <b>before any mining begins</b>. Every block mined on node1 propagates to node2 in real time — they stay in sync throughout."
+            data-es="Ambos nodos se conectan como pares <b>antes de que empiece cualquier minado</b>. Cada bloque minado en node1 se propaga a node2 en tiempo real — se mantienen sincronizados en todo momento.">
+            Both nodes are connected as peers <b>before any mining begins</b>. Every block mined on node1 propagates to node2 in real time — they stay in sync throughout.
+          </span>
+        </div>
+        <div class="run-cmd">./scripts/demo-full.sh</div>
+        <div class="demo-intro-box">
+          <span class="t"
+            data-en="The script pauses <b>once</b> — when the transaction is in the mempool — for you to explore the dashboard. Compare what you see to Demo A."
+            data-es="El script hace <b>una pausa</b> — cuando la transacción está en el mempool — para que explores el dashboard. Compara lo que ves con la Demo A.">
+            The script pauses <b>once</b> — when the transaction is in the mempool — for you to explore the dashboard. Compare what you see to Demo A.
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SLIDE 09a-1: DEMO B MEMPOOL ──────────────────────── -->
+    <div class="slide mode-a" id="s09a1">
+      <p class="tag t" data-en="Demo B · Pause" data-es="Demo B · Pausa">Demo B · Pause</p>
+      <h2 class="title t" data-en="Transaction in mempool — both nodes" data-es="Transacción en mempool — en ambos nodos">Transaction in mempool — both nodes</h2>
+      <div class="img-split">
+        <div class="img-text">
+          <div class="obs wait"><span class="obs-i">⏳</span>
+            <span class="t"
+              data-en="<b>Both nodes show 1 pending transaction</b> in the mempool — they share the same P2P network"
+              data-es="<b>Ambos nodos muestran 1 transacción pendiente</b> en el mempool — comparten la misma red P2P">
+              <b>Both nodes show 1 pending transaction</b> in the mempool — they share the same P2P network
+            </span>
+          </div>
+          <div class="obs info"><span class="obs-i">💰</span>
+            <span class="t"
+              data-en="Balances still unchanged — the transaction has not been mined yet"
+              data-es="Los saldos siguen sin cambio — la transacción aún no ha sido minada">
+              Balances still unchanged — the transaction has not been mined yet
+            </span>
+          </div>
+          <div class="obs ok"><span class="obs-i">🔄</span>
+            <span class="t"
+              data-en="Both nodes at the same height (101) with the same tip hash — already in sync"
+              data-es="Ambos nodos a la misma altura (101) con el mismo hash de punta — ya sincronizados">
+              Both nodes at the same height (101) with the same tip hash — already in sync
+            </span>
+          </div>
+          <div class="obs info"><span class="obs-i">↔️</span>
+            <span class="t"
+              data-en="<b>Key contrast with Demo A:</b> both mempools are full, not just node1"
+              data-es="<b>Contraste clave con Demo A:</b> ambos mempools tienen la transacción, no solo node1">
+              <b>Key contrast with Demo A:</b> both mempools are full, not just node1
+            </span>
+          </div>
+        </div>
+        <div class="img-box">
+          <img src="images/full-demo-mempool-pending.png" alt="Full demo mempool">
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SLIDE 09a-2: DEMO B CONFIRMED ────────────────────── -->
+    <div class="slide mode-a" id="s09a2">
+      <p class="tag t" data-en="Demo B · Final" data-es="Demo B · Final">Demo B · Final</p>
+      <h2 class="title t" data-en="Confirmed — both nodes in sync" data-es="Confirmado — ambos nodos sincronizados">Confirmed — both nodes in sync</h2>
+      <div class="img-split">
+        <div class="img-text">
+          <div class="obs ok"><span class="obs-i">✅</span>
+            <span class="t"
+              data-en="Both nodes: 102 blocks, same tip hash — <b>green sync indicator</b>"
+              data-es="Ambos nodos: 102 bloques, mismo hash de punta — <b>indicador de sync verde</b>">
+              Both nodes: 102 blocks, same tip hash — <b>green sync indicator</b>
+            </span>
+          </div>
+          <div class="obs ok"><span class="obs-i">💚</span>
+            <span class="t"
+              data-en="node1: ~49 BTC &nbsp; node2: 1 BTC — transaction confirmed"
+              data-es="node1: ~49 BTC &nbsp; node2: 1 BTC — transacción confirmada">
+              node1: ~49 BTC &nbsp; node2: 1 BTC — transaction confirmed
+            </span>
+          </div>
+          <div class="obs info"><span class="obs-i">🔍</span>
+            <span class="t"
+              data-en="Find block 102 in either node → click it → 2 transactions: coinbase + the 1 BTC payment"
+              data-es="Busca el bloque 102 en cualquier nodo → haz clic → 2 transacciones: coinbase + el pago de 1 BTC">
+              Find block 102 in either node → click it → 2 transactions: coinbase + the 1 BTC payment
+            </span>
+          </div>
+          <div class="node-compare">
+            <div class="nc-box">
+              <div class="nc-name">node1</div>
+              <div class="nc-val ok">~49 BTC</div>
+            </div>
+            <div class="nc-box">
+              <div class="nc-name">node2</div>
+              <div class="nc-val ok">1 BTC</div>
+            </div>
+          </div>
+        </div>
+        <div class="img-box">
+          <img src="images/full-demo-confirmed.png" alt="Full demo confirmed">
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!--  DEMO B — MODE B (overview)                               -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <div class="slide mode-b" id="s09b">
+      <p class="tag t" data-en="Demo B" data-es="Demo B">Demo B</p>
+      <h2 class="title t" data-en="Full — connected from the start" data-es="Completo — conectados desde el inicio">Full — connected from the start</h2>
+      <div class="tl3">
+        <div class="tlcard">
+          <div class="tlcard-head">
+            <div class="tln">1</div>
+            <div class="tlcard-title t" data-en="Mine 101 blocks" data-es="Minar 101 bloques">Mine 101 blocks</div>
+          </div>
+          <div style="background:var(--surf3);aspect-ratio:16/9;display:flex;align-items:center;justify-content:center">
+            <span style="font-size:28px">🔄</span>
+          </div>
+          <div class="tlcard-note t"
+            data-en="Both nodes sync in real time. Same height. Same tip hash. Green indicator throughout."
+            data-es="Ambos nodos sincronizan en tiempo real. Misma altura. Mismo hash. Indicador verde en todo momento.">
+            Both nodes sync in real time. Same height. Same tip hash. Green indicator throughout.
+          </div>
+        </div>
+        <div class="tlcard">
+          <div class="tlcard-head">
+            <div class="tln">2</div>
+            <div class="tlcard-title t" data-en="Send 1 BTC (mempool)" data-es="Enviar 1 BTC (mempool)">Send 1 BTC (mempool)</div>
+          </div>
+          <img src="images/full-demo-mempool-pending.png" alt="">
+          <div class="tlcard-note t"
+            data-en="1 pending tx on BOTH nodes — unlike Demo A, both mempools receive the broadcast immediately."
+            data-es="1 tx pendiente en AMBOS nodos — a diferencia de la Demo A, ambos mempools reciben el broadcast al instante.">
+            1 pending tx on BOTH nodes — unlike Demo A, both mempools receive the broadcast immediately.
+          </div>
+        </div>
+        <div class="tlcard">
+          <div class="tlcard-head">
+            <div class="tln">3</div>
+            <div class="tlcard-title t" data-en="Mine 1 block → confirmed" data-es="Minar 1 bloque → confirmado">Mine 1 block → confirmed</div>
+          </div>
+          <img src="images/full-demo-confirmed.png" alt="">
+          <div class="tlcard-note t"
+            data-en="102 blocks on both. node1 ~49 BTC, node2 1 BTC. Green sync. Block 102 has 2 transactions."
+            data-es="102 bloques en ambos. node1 ~49 BTC, node2 1 BTC. Sync verde. Bloque 102 tiene 2 transacciones.">
+            102 blocks on both. node1 ~49 BTC, node2 1 BTC. Green sync. Block 102 has 2 transactions.
+          </div>
+        </div>
+      </div>
+      <div class="run-cmd" style="margin-top:16px;max-width:1040px;width:100%">./scripts/demo-full.sh</div>
+    </div>
+
+    <!-- ─── SLIDE 10: INSIDE A BLOCK ─────────────────────────── -->
+    <div class="slide" id="s10">
+      <p class="tag t" data-en="Block anatomy" data-es="Anatomía de un bloque">Block anatomy</p>
+      <h2 class="title t" data-en="Inside a block" data-es="Dentro de un bloque">Inside a block</h2>
+      <div class="block-split">
+        <div>
+          <div class="bfields-grid">
+            <div class="bfield">
+              <div class="bfield-k">HEIGHT</div>
+              <div class="bfield-v t"
+                data-en="Position in the chain (102) — sequential, never reused"
+                data-es="Posición en la cadena (102) — secuencial, nunca repetida">
+                Position in the chain (102) — sequential, never reused
+              </div>
+            </div>
+            <div class="bfield">
+              <div class="bfield-k">HASH</div>
+              <div class="bfield-v t"
+                data-en="64-char SHA-256d fingerprint — uniquely identifies this block"
+                data-es="Huella SHA-256d de 64 char — identifica unívocamente el bloque">
+                64-char SHA-256d fingerprint — uniquely identifies this block
+              </div>
+            </div>
+            <div class="bfield">
+              <div class="bfield-k">PREV HASH</div>
+              <div class="bfield-v t"
+                data-en="Hash of the previous block — this link is what makes the chain tamper-proof"
+                data-es="Hash del bloque anterior — este enlace hace que la cadena sea inmutable">
+                Hash of the previous block — this link is what makes the chain tamper-proof
+              </div>
+            </div>
+            <div class="bfield">
+              <div class="bfield-k">MERKLE ROOT</div>
+              <div class="bfield-v t"
+                data-en="Fingerprint of all transactions — altering any tx invalidates the block"
+                data-es="Huella de todas las tx — alterar cualquier transacción invalida el bloque">
+                Fingerprint of all transactions — altering any tx invalidates the block
+              </div>
+            </div>
+            <div class="bfield">
+              <div class="bfield-k">NONCE</div>
+              <div class="bfield-v t"
+                data-en="Number miners iterate until the hash meets the difficulty target"
+                data-es="Número que los mineros iteran hasta que el hash cumple la dificultad">
+                Number miners iterate until the hash meets the difficulty target
+              </div>
+            </div>
+            <div class="bfield">
+              <div class="bfield-k">TIMESTAMP</div>
+              <div class="bfield-v t"
+                data-en="Unix timestamp — when this block was mined (approximate)"
+                data-es="Marca de tiempo Unix — cuándo se minó el bloque (aproximado)">
+                Unix timestamp — when this block was mined (approximate)
+              </div>
+            </div>
+          </div>
+          <div class="btx">
+            <div class="btx-label t" data-en="Tx 1 — Coinbase (mining reward)" data-es="Tx 1 — Coinbase (recompensa de minado)">Tx 1 — Coinbase (mining reward)</div>
+            <div class="btx-desc t"
+              data-en="50 BTC created from nothing. Every block has exactly one. No inputs — coins are born here."
+              data-es="50 BTC creados de la nada. Cada bloque tiene exactamente uno. Sin entradas — las monedas nacen aquí.">
+              50 BTC created from nothing. Every block has exactly one. No inputs — coins are born here.
+            </div>
+          </div>
+          <div class="btx">
+            <div class="btx-label t" data-en="Tx 2 — Payment (inputs → outputs)" data-es="Tx 2 — Pago (entradas → salidas)">Tx 2 — Payment (inputs → outputs)</div>
+            <div class="btx-desc t"
+              data-en="1 BTC → node2. Change output (~49 BTC − fee) back to node1. Two outputs total."
+              data-es="1 BTC → node2. Salida de cambio (~49 BTC − comisión) de vuelta a node1. Dos salidas en total.">
+              1 BTC → node2. Change output (~49 BTC − fee) back to node1. Two outputs total.
+            </div>
+          </div>
+        </div>
+        <div class="img-box">
+          <img src="images/block-detail-two-transactions.png" alt="Block detail two transactions">
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SLIDE 11: MANUAL EXPLORATION ─────────────────────── -->
+    <div class="slide" id="s11">
+      <p class="tag t" data-en="Hands-on time" data-es="Práctica libre">Hands-on time</p>
+      <h2 class="title t" data-en="Explore on your own" data-es="Explora por tu cuenta">Explore on your own</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;max-width:960px">
+        <div class="cmd">
+          <div class="cmd-script">./scripts/mine-blocks.sh [N] [node]</div>
+          <div class="cmd-desc t"
+            data-en="Mine N blocks on node 1 or 2. Try mining 5 on node2 when both are connected — watch node1 sync instantly."
+            data-es="Mina N bloques en el nodo 1 o 2. Prueba minar 5 en node2 cuando están conectados — observa cómo node1 sincroniza al instante.">
+            Mine N blocks on node 1 or 2. Try mining 5 on node2 when both are connected — watch node1 sync instantly.
+          </div>
+        </div>
+        <div class="cmd">
+          <div class="cmd-script">./scripts/send-transaction.sh [amount] [from] [to]</div>
+          <div class="cmd-desc t"
+            data-en="Send BTC between nodes. Script pauses at mempool — inspect the pending tx before it is confirmed."
+            data-es="Envía BTC entre nodos. El script pausa en el mempool — inspecciona la tx pendiente antes de confirmarla.">
+            Send BTC between nodes. Script pauses at mempool — inspect the pending tx before it is confirmed.
+          </div>
+        </div>
+        <div class="cmd">
+          <div class="cmd-script">./scripts/connect-nodes.sh</div>
+          <div class="cmd-desc t"
+            data-en="Connect node1 ↔ node2 as P2P peers. Run after Demo A to trigger the consensus sync moment."
+            data-es="Conecta node1 ↔ node2 como pares P2P. Ejecútalo tras la Demo A para activar el momento de sincronización por consenso.">
+            Connect node1 ↔ node2 as P2P peers. Run after Demo A to trigger the consensus sync moment.
+          </div>
+        </div>
+        <div class="cmd">
+          <div class="cmd-script">./scripts/reset.sh</div>
+          <div class="cmd-desc t"
+            data-en="Wipe all blockchain data and start fresh. Safe at any time — run start-nodes.sh afterwards to restart."
+            data-es="Borra todos los datos de la blockchain y empieza desde cero. Seguro en cualquier momento — lanza start-nodes.sh después para reiniciar.">
+            Wipe all blockchain data and start fresh. Safe at any time — run start-nodes.sh afterwards to restart.
+          </div>
+        </div>
+      </div>
+      <div style="width:100%;max-width:960px;margin-top:12px">
+        <div class="try-box t"
+          data-en="💡 <b>Challenge:</b> reset → Demo A → connect nodes → send 0.5 BTC from node2 to node1 → mine 1 block. Find the change output in block detail and verify both balances."
+          data-es="💡 <b>Reto:</b> reset → Demo A → conectar nodos → enviar 0,5 BTC de node2 a node1 → minar 1 bloque. Encuentra la salida de cambio en el detalle del bloque y verifica ambos saldos.">
+          💡 <b>Challenge:</b> reset → Demo A → connect nodes → send 0.5 BTC from node2 to node1 → mine 1 block. Find the change output in block detail and verify both balances.
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SLIDE 12: SUMMARY & Q&A ──────────────────────────── -->
+    <div class="slide" id="s12">
+      <p class="tag t" data-en="Summary" data-es="Resumen">Summary</p>
+      <h2 class="title t" data-en="What we learned today" data-es="Lo que hemos aprendido hoy">What we learned today</h2>
+      <div class="sum-wrap">
+        <div class="takeaways">
+          <div class="take">
+            <div class="take-n">01</div>
+            <span class="t"
+              data-en="<b>Regtest = private, instant, free.</b> No real money involved — the perfect sandbox for learning Bitcoin internals."
+              data-es="<b>Regtest = privado, instantáneo, gratuito.</b> Sin dinero real — el entorno perfecto para aprender Bitcoin desde dentro.">
+              <b>Regtest = private, instant, free.</b> No real money involved — the perfect sandbox for learning Bitcoin internals.
+            </span>
+          </div>
+          <div class="take">
+            <div class="take-n">02</div>
+            <span class="t"
+              data-en="<b>Coinbase maturity rule:</b> freshly mined coins take 100 more blocks before they can be spent."
+              data-es="<b>Regla de madurez del coinbase:</b> las monedas recién minadas necesitan 100 bloques más antes de poderse gastar.">
+              <b>Coinbase maturity rule:</b> freshly mined coins take 100 more blocks before they can be spent.
+            </span>
+          </div>
+          <div class="take">
+            <div class="take-n">03</div>
+            <span class="t"
+              data-en="<b>Mempool = the waiting room.</b> Transactions live there until a miner picks them up. Nothing is final before that."
+              data-es="<b>Mempool = la sala de espera.</b> Las transacciones viven ahí hasta que un minero las recoge. Nada es definitivo antes de eso.">
+              <b>Mempool = the waiting room.</b> Transactions live there until a miner picks them up. Nothing is final before that.
+            </span>
+          </div>
+          <div class="take">
+            <div class="take-n">04</div>
+            <span class="t"
+              data-en="<b>Consensus in action:</b> isolated nodes build separate chains. Connected nodes always converge on the longest one."
+              data-es="<b>Consenso en acción:</b> los nodos aislados construyen cadenas separadas. Los nodos conectados siempre convergen en la más larga.">
+              <b>Consensus in action:</b> isolated nodes build separate chains. Connected nodes always converge on the longest one.
+            </span>
+          </div>
+          <div class="take">
+            <div class="take-n">05</div>
+            <span class="t"
+              data-en="<b>Every block = coinbase + transactions.</b> Each transaction has inputs (where coins come from) and outputs (where they go)."
+              data-es="<b>Cada bloque = coinbase + transacciones.</b> Cada transacción tiene entradas (de dónde vienen las monedas) y salidas (a dónde van).">
+              <b>Every block = coinbase + transactions.</b> Each transaction has inputs (where coins come from) and outputs (where they go).
+            </span>
+          </div>
+        </div>
+        <div class="qr-panel">
+          <div class="qr-label t" data-en="Project repository" data-es="Repositorio del proyecto">Project repository</div>
+          <div class="qr-frame">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=https://github.com/Kairos-Tek/bitcoin-workshop&color=080c16&bgcolor=ffffff" alt="QR">
+          </div>
+          <div class="qr-url">github.com/Kairos-Tek/<br>bitcoin-workshop</div>
+          <div style="margin-top:16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px">
+            <img class="kt-logo" src="logos/logotipo-white.svg" alt="Kairos Tek" style="height:36px;width:auto">
+            <div style="font-size:10px;color:var(--muted)">kairos-tek.com</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SLIDE 13: ABOUT KAIROS TEK ──────────────────────── -->
+    <div class="slide" id="s13">
+      <div class="about-wrap">
+        <div class="about-left">
+          <p class="tag t" data-en="About us" data-es="Quiénes somos">About us</p>
+          <img class="kt-logo" src="logos/logotipo-white.svg" alt="Kairos Tek" style="height:44px;width:auto;margin-bottom:8px;align-self:flex-start">
+          <p class="about-desc t"
+             data-en="This hands-on workshop is one example of the training programmes Kairos Tek delivers for universities, business schools, and corporate teams. We design and facilitate practical, practitioner-led sessions on AI and Blockchain — from executive introductions to deep technical workshops — tailored to each client's sector and maturity level."
+             data-es="Este taller práctico es un ejemplo de los programas de formación que Kairos Tek imparte en universidades, escuelas de negocio y empresas. Diseñamos y facilitamos sesiones prácticas, impartidas por profesionales en activo, sobre IA y Blockchain — desde introductorios para directivos hasta talleres técnicos avanzados — adaptados al sector y nivel de madurez de cada cliente.">
+            This hands-on workshop is one example of the training programmes Kairos Tek delivers for universities, business schools, and corporate teams. We design and facilitate practical, practitioner-led sessions on AI and Blockchain — from executive introductions to deep technical workshops — tailored to each client's sector and maturity level.
+          </p>
+          <div class="about-topics">
+            <div class="atopic t" data-en="🤖 AI for business &amp; executives" data-es="🤖 IA para empresa y directivos">🤖 AI for business &amp; executives</div>
+            <div class="atopic t" data-en="🔗 Blockchain fundamentals &amp; Web3" data-es="🔗 Fundamentos de Blockchain y Web3">🔗 Blockchain fundamentals &amp; Web3</div>
+            <div class="atopic t" data-en="⚡ LLMs, agents &amp; AI tools" data-es="⚡ LLMs, agentes y herramientas IA">⚡ LLMs, agents &amp; AI tools</div>
+            <div class="atopic t" data-en="📜 Smart contracts &amp; DeFi" data-es="📜 Smart contracts y DeFi">📜 Smart contracts &amp; DeFi</div>
+            <div class="atopic t" data-en="🏛 AI strategy for leadership" data-es="🏛 Estrategia de IA para liderazgo">🏛 AI strategy for leadership</div>
+            <div class="atopic t" data-en="🧪 Hands-on labs like this one" data-es="🧪 Labs prácticos como este">🧪 Hands-on labs like this one</div>
+          </div>
+        </div>
+        <div class="about-right">
+          <div class="about-cta-box">
+            <p class="about-cta-label t"
+               data-en="Interested in AI &amp; Blockchain training for your organisation?"
+               data-es="¿Interesado en formación de IA y Blockchain para tu organización?">
+              Interested in AI &amp; Blockchain training for your organisation?
+            </p>
+            <p class="about-cta-sub t"
+               data-en="We deliver custom workshops, masterclasses, and multi-session programmes for corporate teams, universities, and business schools across Europe."
+               data-es="Impartimos talleres, masterclasses y programas multi-sesión a medida para equipos corporativos, universidades y escuelas de negocio en toda Europa.">
+              We deliver custom workshops, masterclasses, and multi-session programmes for corporate teams, universities, and business schools across Europe.
+            </p>
+            <a href="https://kairos-tek.com" target="_blank" class="about-cta-btn t"
+               data-en="Get in touch → kairos-tek.com"
+               data-es="Contáctanos → kairos-tek.com">
+              Get in touch → kairos-tek.com
+            </a>
+            <div class="about-formats">
+              <div class="afmt t" data-en="Half-day &amp; full-day workshops" data-es="Talleres de medio día y día completo">Half-day &amp; full-day workshops</div>
+              <div class="afmt t" data-en="4–8 week programmes" data-es="Programas de 4–8 semanas">4–8 week programmes</div>
+              <div class="afmt t" data-en="Keynotes &amp; conference talks" data-es="Keynotes y ponencias">Keynotes &amp; conference talks</div>
+              <div class="afmt t" data-en="Online &amp; on-site" data-es="Online y presencial">Online &amp; on-site</div>
+            </div>
+          </div>
+          <div class="cowork-box">
+            <div class="cowork-tag">Kairos Tek · Cowork</div>
+            <div class="cowork-headline t"
+              data-en="This workshop was built with AI — in hours, not weeks."
+              data-es="Este taller fue construido con IA — en horas, no en semanas.">
+              This workshop was built with AI — in hours, not weeks.
+            </div>
+            <div class="cowork-body t"
+              data-en="We used Cowork (Claude's AI assistant for professionals) to design, script, and produce this entire workshop. The same approach can transform how your team creates training, reports, and presentations."
+              data-es="Usamos Cowork (el asistente de IA de Claude para profesionales) para diseñar, redactar y producir todo este taller. El mismo enfoque puede transformar cómo tu equipo crea formación, informes y presentaciones.">
+              We used Cowork (Claude's AI assistant for professionals) to design, script, and produce this entire workshop. The same approach can transform how your team creates training, reports, and presentations.
+            </div>
+            <div class="cowork-cta t"
+              data-en="→ Ask us how AI can work this way for your organisation"
+              data-es="→ Pregúntanos cómo la IA puede funcionar así en tu organización">
+              → Ask us how AI can work this way for your organisation
+            </div>
+          </div>
+          <p class="about-byline t"
+             data-en="Training delivered by active practitioners — not academics."
+             data-es="Formación impartida por profesionales en activo — no por académicos.">
+            Training delivered by active practitioners — not academics.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /swrap -->
+
+  <!-- Nav bar -->
+  <div id="nav" style="position:relative">
+    <div class="nav-group">
+      <button class="nbtn" id="btn-prev" onclick="prevSlide()">←</button>
+      <button class="nbtn" id="btn-next" onclick="nextSlide()">→</button>
+      <span id="counter">1 / 12</span>
+    </div>
+    <!-- Persistent Kairos Tek logo — centred in nav bar on every slide -->
+    <div id="nav-logo">
+      <img class="kt-logo" src="logos/logotipo-white.svg" alt="Kairos Tek" style="height:26px;width:auto">
+    </div>
+    <div class="nav-group">
+      <button class="ibtn" id="btn-fs" onclick="toggleFS()" title="Fullscreen (F)">⛶</button>
+      <button class="ibtn" id="mode-btn" onclick="switchMode()"></button>
+      <button class="ibtn on" id="lang-en" onclick="setLang('en')">EN</button>
+      <button class="ibtn" id="lang-es" onclick="setLang('es')">ES</button>
+    </div>
+  </div>
+</div><!-- /pres -->
+
+<div id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────
+let currentMode = 'a'; // 'a' or 'b'
+let currentLang = localStorage.getItem('lang') || 'en';
+let currentIdx  = 0;
+let sequence    = [];
+
+// ─── SEQUENCES ───────────────────────────────────────────────────
+const SEQ = {
+  a: ['s01','s02','s03','s04','s05','s06',
+      's07a0','s07a1','s07a2','s07a3',
+      's08',
+      's09a0','s09a1','s09a2',
+      's10','s11','s12','s13'],
+  b: ['s01','s02','s03','s04','s05','s06',
+      's07b',
+      's08',
+      's09b',
+      's10','s11','s12','s13']
+};
+
+// ─── START PRESENTATION ──────────────────────────────────────────
+function startPresentation(mode) {
+  currentMode = mode;
+  currentIdx  = 0;
+  document.getElementById('mode-selector').style.display = 'none';
+  const p = document.getElementById('pres');
+  p.style.display = 'flex';
+  p.classList.add('on');
+  buildSequence();
+  goTo(0);
+  setLang(currentLang);
+  setDate();
+  initQR();
+}
+
+function buildSequence() {
+  sequence = SEQ[currentMode];
+  // Hide all mode-specific slides, show correct ones
+  document.querySelectorAll('.mode-a').forEach(el => {
+    el.style.display = currentMode === 'a' ? '' : 'none';
+  });
+  document.querySelectorAll('.mode-b').forEach(el => {
+    el.style.display = currentMode === 'b' ? '' : 'none';
+  });
+  updateModeBtnLabel();
+}
+
+// ─── NAVIGATION ──────────────────────────────────────────────────
+function goTo(idx) {
+  if(idx < 0 || idx >= sequence.length) return;
+  const prev = document.getElementById(sequence[currentIdx]);
+  if(prev) prev.classList.remove('active');
+  currentIdx = idx;
+  const curr = document.getElementById(sequence[currentIdx]);
+  if(curr) curr.classList.add('active');
+  updateNav();
+}
+
+function nextSlide() { goTo(currentIdx + 1); }
+function prevSlide() { goTo(currentIdx - 1); }
+
+function updateNav() {
+  const total = sequence.length;
+  document.getElementById('counter').textContent = (currentIdx + 1) + ' / ' + total;
+  document.getElementById('btn-prev').disabled = currentIdx === 0;
+  document.getElementById('btn-next').disabled = currentIdx === total - 1;
+  const pct = total <= 1 ? 100 : (currentIdx / (total - 1)) * 100;
+  document.getElementById('pbar').style.width = pct + '%';
+}
+
+// ─── KEYBOARD ────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if(document.getElementById('pres').classList.contains('on')) {
+    if(e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+    if(e.key === 'ArrowLeft')  { e.preventDefault(); prevSlide(); }
+    if(e.key === 'f' || e.key === 'F') toggleFS();
+  }
+});
+
+// ─── FULLSCREEN ───────────────────────────────────────────────────
+function toggleFS() {
+  if(!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(()=>{});
+  } else {
+    document.exitFullscreen().catch(()=>{});
+  }
+}
+
+// ─── LANGUAGE ────────────────────────────────────────────────────
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('lang', lang);
+  document.querySelectorAll('.t').forEach(el => {
+    const txt = el.dataset[lang];
+    if(txt !== undefined) el.innerHTML = txt;
+  });
+  document.getElementById('lang-en').classList.toggle('on', lang === 'en');
+  document.getElementById('lang-es').classList.toggle('on', lang === 'es');
+}
+
+// ─── MODE SWITCH ──────────────────────────────────────────────────
+function switchMode() {
+  const newMode = currentMode === 'a' ? 'b' : 'a';
+  currentMode = newMode;
+  currentIdx  = 0;
+  buildSequence();
+  // Show mode selector briefly? No — just switch and restart
+  document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+  goTo(0);
+}
+
+function updateModeBtnLabel() {
+  document.getElementById('mode-btn').textContent =
+    currentMode === 'a' ? 'Mode A' : 'Mode B';
+}
+
+// ─── DYNAMIC DATE ─────────────────────────────────────────────────
+function setDate() {
+  const d = new Date();
+  const opts = { year:'numeric', month:'long', day:'numeric' };
+  document.getElementById('dynamic-date').textContent =
+    d.toLocaleDateString(currentLang === 'es' ? 'es-ES' : 'en-GB', opts);
+}
+
+// ─── OS TABS ─────────────────────────────────────────────────────
+function showOS(id, btn) {
+  document.querySelectorAll('.otab').forEach(t => t.classList.remove('on'));
+  document.querySelectorAll('.opanel').forEach(p => p.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('os-' + id).classList.add('on');
+}
+
+// ─── COPY CODE ───────────────────────────────────────────────────
+function copyCode(btn) {
+  const block = btn.parentElement;
+  const txt = block.innerText.replace('copy','').trim();
+  navigator.clipboard.writeText(txt).then(() => {
+    btn.textContent = '✓';
+    setTimeout(() => { btn.textContent = 'copy'; }, 1500);
+    showToast(currentLang === 'es' ? 'Copiado' : 'Copied');
+  }).catch(() => {
+    showToast('Select + Ctrl+C');
+  });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1600);
+}
+
+// ─── QR CODE ─────────────────────────────────────────────────────
+function initQR() {
+  // QR loaded via img src — just verify it loads
+  const qrImg = document.querySelector('.qr-frame img');
+  if(qrImg) {
+    qrImg.onerror = () => {
+      qrImg.parentElement.innerHTML =
+        '<div style="font-size:10px;color:var(--muted);text-align:center;padding:8px">github.com/Kairos-Tek/<br>bitcoin-workshop</div>';
+    };
+  }
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────
+// Apply saved language to mode selector on load
+(function init() {
+  if(currentLang === 'es') {
+    document.querySelectorAll('.t').forEach(el => {
+      const txt = el.dataset['es'];
+      if(txt !== undefined) el.innerHTML = txt;
+    });
+  }
+})();
+</script>
+</body>
+</html>

@@ -12,3 +12,9 @@ __pycache__/
 # Vim swap files
 *.swp
 *.swo
+
+# Legacy logo files (superseded by presentation/logos/)
+logos/
+
+# Internal / build artifacts
+website_prompt.md

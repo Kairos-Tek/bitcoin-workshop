@@ -62,7 +62,6 @@ fi
 
 CLI_SRC="bitcoin-cli -regtest -datadir=${DATADIR_SRC} -rpcport=${PORT_SRC}"
 CLI_DST="bitcoin-cli -regtest -datadir=${DATADIR_DST} -rpcport=${PORT_DST}"
-MINE="$(dirname "$0")/mine-blocks.sh"
 
 echo ""
 echo "╔══════════════════════════════════════════════╗"
@@ -107,7 +106,8 @@ ENOUGH=$(awk -v bal="$BAL_SRC" -v amt="$AMOUNT" 'BEGIN { print (bal+0 > amt+0) ?
 if [[ "$ENOUGH" != "yes" ]]; then
   echo ""
   echo "   ❌ Insufficient balance on node${SRC}: ${BAL_SRC} BTC available, ${AMOUNT} BTC requested"
-  echo "      Mine some blocks first: bitcoin-cli -regtest -datadir=${DATADIR_SRC} -rpcport=${PORT_SRC} -generate 101"
+  echo "      Run a demo first, or mine blocks manually:"
+  echo "      ./scripts/mine-blocks.sh 101 ${SRC}"
   exit 1
 fi
 
@@ -127,28 +127,15 @@ echo ""
 echo "   node${DST} balance (should be unchanged — tx is in the mempool):"
 echo "   $($CLI_DST getbalance 2>/dev/null || echo '0') BTC"
 echo ""
-echo ""
+
 echo "╔══════════════════════════════════════════════╗"
 echo "║  Transaction broadcast — not yet confirmed   ║"
 echo "╚══════════════════════════════════════════════╝"
 echo ""
-echo "  👉 Check the dashboard now:"
+echo "  👉 Switch to the dashboard and verify:"
 echo "     • Mempool counter shows 1 pending transaction"
 echo "     • Wallet balances have NOT changed yet"
 echo "     • The transaction is waiting to be included in a block"
 echo ""
-read -rp "  When ready, press Enter." _
-echo ""
-echo ""
-echo "╔═══════════════════════════════════════════════════════╗"
-echo "║  Mining block to confirm transaction (or maybe not!)  ║"
-echo "╚═══════════════════════════════════════════════════════╝"
-echo ""
-echo "⛏  Remember you have to mine 1 block using './scripts/mine-blocks.sh 1 1' to confirm the new transaction... or you can send more transactions first!"
-echo ""
-echo "  Then check the dashboard again:"
-echo "     • Mempool is empty"
-echo "     • A new block appears at the top of the block list"
-echo "     • Click it to see the coinbase + the payment transaction"
-echo "     • Wallet balances have updated"
+read -rp "  When ready, press Enter to continue." _
 echo ""

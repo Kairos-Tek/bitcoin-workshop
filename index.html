@@ -560,6 +560,10 @@
   <div class="header-right">
     <span class="pulse-dot" id="global-dot"></span>
     <span>Updated: <span id="last-update">—</span></span>
+    <button id="force-refresh-btn" onclick="forceRefresh()" title="Force refresh all data now"
+      style="margin-left:10px;padding:4px 10px;font-size:11px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text2);cursor:pointer;font-family:var(--mono)">
+      ↻ Refresh
+    </button>
   </div>
 </header>
 
@@ -652,8 +656,8 @@ function shortHash(h) {
 function fmtTime(ts) {
   if (!ts) return '—';
   const d = new Date(ts * 1000);
-  return d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
-       + ' ' + d.toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit' });
+  return d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
+       + ' ' + d.toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit' });
 }
 
 function fmtBytes(b) {
@@ -810,6 +814,26 @@ function renderNodePanel(nodeId) {
 // ═══════════════════════════════════════════════════════════════════════════
 // Render comparison
 // ═══════════════════════════════════════════════════════════════════════════
+function hashCell(hash) {
+  if (!hash) return '<span style="color:var(--text3)">—</span>';
+  const short = shortHash(hash);
+  return `<span style="font-family:var(--mono);font-size:10px;color:var(--blue)" title="${hash}">${short}</span>
+    <button onclick="copyHash('${hash}')" title="Copy full hash"
+      style="margin-left:4px;padding:1px 5px;font-size:9px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer">
+      copy
+    </button>`;
+}
+
+function copyHash(hash) {
+  navigator.clipboard.writeText(hash).then(() => {
+    const msg = document.createElement('div');
+    msg.textContent = 'Hash copied!';
+    msg.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;z-index:9999;color:var(--text1)';
+    document.body.appendChild(msg);
+    setTimeout(() => msg.remove(), 1500);
+  });
+}
+
 function renderComparison() {
   const s1 = state[1];
   const s2 = state[2];
@@ -831,8 +855,8 @@ function renderComparison() {
     ['Difficulty',      mono(c1?.difficulty?.toFixed(4)), mono(c2?.difficulty?.toFixed(4))],
     ['Mempool (txs)',   mono(m1?.size ?? 0),           mono(m2?.size ?? 0)],
     ['Peers',           mono(n1?.connections),         mono(n2?.connections)],
-    ['Best Hash',       `<span style="font-family:var(--mono);font-size:10px;color:var(--blue)">${shortHash(c1?.bestblockhash)}</span>`,
-                        `<span style="font-family:var(--mono);font-size:10px;color:var(--blue)">${shortHash(c2?.bestblockhash)}</span>`],
+    ['Best Hash',       hashCell(c1?.bestblockhash),
+                        hashCell(c2?.bestblockhash)],
   ];
 
   const tbody = rows.map(([label, v1, v2]) => `
@@ -851,10 +875,10 @@ function renderComparison() {
 
   if (!s1.online && !s2.online) {
     banner.className = 'sync-banner unknown';
-    banner.innerHTML = '<span>⚠️</span> Ambos nodos offline';
+    banner.innerHTML = '<span>⚠️</span> Both nodes offline';
   } else if (!h1 || !h2) {
     banner.className = 'sync-banner unknown';
-    banner.innerHTML = '<span>⏳</span> Esperando datos de ambos nodos...';
+    banner.innerHTML = '<span>⏳</span> Waiting for node data...';
   } else if (h1 === h2) {
     banner.className = 'sync-banner synced';
     banner.innerHTML = '<span>✅</span> Nodes in sync — same tip block';
@@ -959,11 +983,11 @@ async function openBlock(nodeId, hash) {
 
   body.innerHTML = `
     <div class="block-meta-grid">${metaHtml}</div>
-    <div class="tx-list-title">📋 Transacciones (${txs.length})</div>
-    ${txHtml || '<div style="color:var(--text3);text-align:center;padding:20px">Sin transacciones</div>'}
+    <div class="tx-list-title">📋 Transactions (${txs.length})</div>
+    ${txHtml || '<div style="color:var(--text3);text-align:center;padding:20px">No transactions</div>'}
   `;
 
-  // Auto-expand primera tx (coinbase)
+  // Auto-expand first tx (coinbase)
   if (txs.length > 0) toggleTx(0);
 }
 
@@ -1058,12 +1082,27 @@ async function pollMempool(nodeId) {
 function updateTimestamp() {
   const now = new Date();
   document.getElementById('last-update').textContent =
-    now.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    now.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
 
-  // Global dot — green si al menos un nodo online
+  // Global dot — green if at least one node is online
   const anyOnline = state[1].online || state[2].online;
   const dot = document.getElementById('global-dot');
   dot.className = 'pulse-dot' + (anyOnline ? '' : ' offline');
+}
+
+async function forceRefresh() {
+  const btn = document.getElementById('force-refresh-btn');
+  btn.textContent = '↻ Refreshing...';
+  btn.disabled = true;
+  await Promise.all([
+    pollInfo(1), pollInfo(2),
+    pollBlocks(1), pollBlocks(2),
+    pollBalance(1), pollBalance(2),
+    pollMempool(1), pollMempool(2),
+  ]);
+  updateTimestamp();
+  btn.textContent = '↻ Refresh';
+  btn.disabled = false;
 }
 
 // ── Initial render (skeletons) ─────────────────────────────────────────────

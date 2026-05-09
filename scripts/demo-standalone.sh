@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# Bitcoin Regtest Dashboard — Standalone demo
+# Bitcoin Regtest Workshop — Demo A (standalone)
 #
-# Runs the standalone practical exercise from the AFI Blockchain Analytics course:
+# Standalone demo: node1 mines and transacts in isolation.
 #   1. Create wallets on both nodes
 #   2. Mine 1 block (coinbase not yet spendable)
 #   3. Mine 100 more blocks (coinbase of block 1 now mature)

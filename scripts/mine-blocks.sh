@@ -3,11 +3,11 @@
 # Bitcoin Regtest Dashboard — Mine blocks
 #
 # Usage:
-#   ./scripts/mine_blocks.sh <num_blocks> <node>
+#   ./scripts/mine-blocks.sh <num_blocks> <node>
 #
 # Examples:
-#   ./scripts/mine_blocks.sh 1 1      # Mine 1 block on node1
-#   ./scripts/mine_blocks.sh 100 2    # Mine 100 blocks on node2
+#   ./scripts/mine-blocks.sh 1 1      # Mine 1 block on node1
+#   ./scripts/mine-blocks.sh 100 2    # Mine 100 blocks on node2
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -e
@@ -40,23 +40,37 @@ if ! [[ "$NUM" =~ ^[0-9]+$ ]] || [[ "$NUM" -lt 1 ]]; then
 fi
 
 if [[ "$NODE" == "1" ]]; then
-  DATADIR="$HOME/bitcoin/node1"; PORT=1234
+  DATADIR="$HOME/bitcoin/node1"; PORT=1234; WALLET="wallet1"
 else
-  DATADIR="$HOME/bitcoin/node2"; PORT=2345
+  DATADIR="$HOME/bitcoin/node2"; PORT=2345; WALLET="wallet2"
 fi
 
 CLI="bitcoin-cli -regtest -datadir=${DATADIR} -rpcport=${PORT}"
 
+# Check node is running
+if ! $CLI getblockchaininfo &>/dev/null; then
+  echo "❌ node${NODE} is not running. Start nodes first: ./scripts/start-nodes.sh"
+  exit 1
+fi
+
+# Ensure a wallet exists and is loaded — required for -generate in Bitcoin Core 24+
+LOADED_WALLETS=$($CLI listwallets 2>/dev/null || echo "[]")
+if echo "$LOADED_WALLETS" | grep -q "\"${WALLET}\""; then
+  : # wallet already loaded — nothing to do
+else
+  # Try to load it; if it doesn't exist yet, create it silently
+  if ! $CLI loadwallet "$WALLET" &>/dev/null; then
+    $CLI createwallet "$WALLET" &>/dev/null \
+      && echo "   ℹ️  Created wallet '$WALLET' on node${NODE}" \
+      || true
+  fi
+fi
+
 echo ""
 echo "⛏  Mining ${NUM} block(s) on node${NODE} (port ${PORT})..."
 
-if [[ "$NUM" -eq 1 ]]; then
-  $CLI -generate 1
-else
-  $CLI -generate "$NUM" > /dev/null
-  echo "   ✅ ${NUM} blocks mined"
-fi
+$CLI -generate "$NUM" > /dev/null
 
 HEIGHT=$($CLI getblockcount 2>/dev/null || echo "?")
-echo "   Chain height: ${HEIGHT}"
+echo "   ✅ Done — chain height: ${HEIGHT}"
 echo ""

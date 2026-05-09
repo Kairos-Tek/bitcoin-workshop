@@ -21,7 +21,7 @@ fi
 
 mkdir -p "$HOME/bitcoin/node1" "$HOME/bitcoin/node2"
 
-echo "🚀 Starting node1 (P2P: 1234, RPC: 1234)..."
+echo "🚀 Starting node1 (P2P: 1235, RPC: 1234)..."
 if $CLI1 getblockchaininfo &>/dev/null; then
   echo "   ⚠️  node1 already running — skipping"
 else
@@ -31,7 +31,7 @@ else
 fi
 
 echo ""
-echo "🚀 Starting node2 (P2P: 2345, RPC: 2345)..."
+echo "🚀 Starting node2 (P2P: 2346, RPC: 2345)..."
 if $CLI2 getblockchaininfo &>/dev/null; then
   echo "   ⚠️  node2 already running — skipping"
 else
